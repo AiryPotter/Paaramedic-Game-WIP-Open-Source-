@@ -20,6 +20,7 @@ var joystick_touch_id: int = -1
 var look_touch_id: int = -1
 var joystick_offset: Vector2 = Vector2.ZERO
 var look_offset: Vector2 = Vector2.ZERO
+var _last_stretcher_grabbed: bool = false
 
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _ready() -> void:
 	_build_interaction_button()
 	_build_toss_button()
 	_build_lock_buttons()
+	_last_stretcher_grabbed = bool(interactor.call("is_stretcher_grabbed"))
 	resized.connect(_reset_touch_state)
 	queue_redraw()
 
@@ -39,6 +41,9 @@ func _process(_delta: float) -> void:
 		interaction_button.text = action_label
 	toss_button.visible = bool(interactor.call("has_held_object"))
 	var stretcher_grabbed := bool(interactor.call("is_stretcher_grabbed"))
+	if stretcher_grabbed != _last_stretcher_grabbed:
+		_last_stretcher_grabbed = stretcher_grabbed
+		_reset_touch_state()
 	front_lock_button.visible = stretcher_grabbed
 	rear_lock_button.visible = stretcher_grabbed
 	front_lock_button.text = str(interactor.call("get_front_lock_label"))
@@ -79,12 +84,10 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		return
 
 	if event.position.x < size.x * 0.5 and event.position.y > size.y * 0.45:
-		# A new touch takes over if Xogot's editor UI swallowed the previous release.
-		joystick_touch_id = event.index
-		joystick_offset = Vector2.ZERO
-		_update_joystick(event.position)
-	elif event.position.x >= size.x * 0.5:
-		# Likewise, replace a stale look/movement touch after returning from editor UI.
+		if joystick_touch_id == -1:
+			joystick_touch_id = event.index
+			_update_joystick(event.position)
+	elif event.position.x >= size.x * 0.5 and look_touch_id == -1:
 		look_touch_id = event.index
 		look_offset = Vector2.ZERO
 		player.set_look_movement_input(Vector2.ZERO)

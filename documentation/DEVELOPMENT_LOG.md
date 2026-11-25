@@ -48,13 +48,14 @@
 
 - Added independent front and rear caster swivel locks with controls available during stretcher mode.
 - Locking spreads the matching caster legs and animates its end lever; unlocking narrows the legs and returns the lever. These animations are separate from the grab/release camera tween.
-- Both caster pairs free: joystick direction drives omnidirectional movement and free casters swivel toward travel. One pair locked: the other pair steers in a car-like mode. Both pairs locked: the stretcher rolls straight in its current wheel direction; brakes remain separate and are not implemented here.
+- Both caster pairs free: the stretcher moves omnidirectionally. With one pair swivel-locked, it steers car-style from the other pair; with both locked it rolls straight. A swivel lock fixes caster direction only and is not a wheel brake.
 - Added front/rear operating positions so the player can grab from either end or side while keeping a consistent third-person camera orientation.
 - Added cancellation, focus-loss, pause, and scene-exit cleanup to reset touch input and release a stuck movement joystick.
-- Added stale-touch recovery: a new touch can take over a joystick after Xogot UI swallows its release, and touch state resets on focus/resume and control resize.
+- Touch recovery now clears stale IDs on focus/resume, viewport resize, and stretcher-mode changes. A second finger no longer steals an active joystick.
 - Locking a caster pair now snaps its wheels straight immediately. While operating the stretcher, the left pad drives and the right LOOK pad orbits the camera around the character; dragging right moves the camera around to the left, and vice versa.
-- Stretcher drive direction and operator facing are captured at grab time. With the front pair locked, the rear free pair drives/steers; with the rear pair locked, the front free pair drives/steers. The support collider is lifted slightly so the caster wheels, rather than the broad underside, carry the stretcher across the floor.
-- Runtime validation is pending: verify steering and movement with each lock combination and operator end, lock/unlock animations, camera orbit, both-side interaction, bag reach/toss distance, and joystick recovery after interrupting touch input.
+- Drive direction and operator facing are captured at grab time. With the front pair locked, the rear pair leads steering; with the rear pair locked, the front pair leads steering. Side operators can drive along the stretcher and steer the free end.
+- Moved wheel collision shapes directly under the rigid body, set low rolling friction, and constrained lateral slip at swivel-locked axles while preserving forward roll. Bumping an unoccupied stretcher now imparts a speed-scaled impulse; grabbing stops its drift. Analog input has a dead zone and retains variable speed.
+- Runtime validation is pending: verify wheel contact, bump/coast/grab behavior, each lock combination from both ends and sides, steering visuals, camera orbit, multitouch buttons, and touch recovery after Xogot interrupts input.
 
 ## Milestone 7 — ZOLL defibrillator equipment
 

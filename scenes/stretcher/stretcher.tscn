@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/stretcher/stretcher_controller.gd" id="1_stretcher_controller"]
 
@@ -11,6 +11,11 @@ size = Vector3(0.86, 0.24, 1.5)
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_wheel"]
 height = 0.12
 radius = 0.18
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_stretcher"]
+friction = 0.05
+rough = false
+bounce = 0.0
 
 [sub_resource type="BoxMesh" id="BoxMesh_deck"]
 size = Vector3(1.0, 0.18, 1.85)
@@ -46,7 +51,8 @@ roughness = 1.0
 
 [node name="Stretcher" type="RigidBody3D" groups=["grabbable_stretcher"]]
 mass = 26.0
-linear_damp = 0.5
+physics_material_override = SubResource("PhysicsMaterial_stretcher")
+linear_damp = 1.2
 angular_damp = 5.0
 axis_lock_angular_x = true
 axis_lock_angular_z = true
@@ -64,6 +70,26 @@ shape = SubResource("BoxShape3D_deck")
 [node name="CollisionFloorSupport" type="CollisionShape3D" parent="."]
 position = Vector3(0, 0.24, 0)
 shape = SubResource("BoxShape3D_floor_support")
+
+[node name="WheelCollisionFrontLeft" type="CollisionShape3D" parent="."]
+position = Vector3(-0.48, 0.18, -0.72)
+rotation = Vector3(0, 0, 1.5708)
+shape = SubResource("CylinderShape3D_wheel")
+
+[node name="WheelCollisionFrontRight" type="CollisionShape3D" parent="."]
+position = Vector3(0.48, 0.18, -0.72)
+rotation = Vector3(0, 0, 1.5708)
+shape = SubResource("CylinderShape3D_wheel")
+
+[node name="WheelCollisionRearLeft" type="CollisionShape3D" parent="."]
+position = Vector3(-0.48, 0.18, 0.72)
+rotation = Vector3(0, 0, 1.5708)
+shape = SubResource("CylinderShape3D_wheel")
+
+[node name="WheelCollisionRearRight" type="CollisionShape3D" parent="."]
+position = Vector3(0.48, 0.18, 0.72)
+rotation = Vector3(0, 0, 1.5708)
+shape = SubResource("CylinderShape3D_wheel")
 
 [node name="SideRailLeft" type="MeshInstance3D" parent="."]
 position = Vector3(-0.46, 0.43, 0)
@@ -116,10 +142,6 @@ rotation = Vector3(0, 0, 1.5708)
 mesh = SubResource("CylinderMesh_wheel")
 material_override = SubResource("Material_wheels")
 
-[node name="Collision" type="CollisionShape3D" parent="CasterFrontLeft"]
-rotation = Vector3(0, 0, 1.5708)
-shape = SubResource("CylinderShape3D_wheel")
-
 [node name="CasterFrontRight" type="Node3D" parent="."]
 position = Vector3(0.48, 0.18, -0.72)
 
@@ -132,10 +154,6 @@ material_override = SubResource("Material_frame")
 rotation = Vector3(0, 0, 1.5708)
 mesh = SubResource("CylinderMesh_wheel")
 material_override = SubResource("Material_wheels")
-
-[node name="Collision" type="CollisionShape3D" parent="CasterFrontRight"]
-rotation = Vector3(0, 0, 1.5708)
-shape = SubResource("CylinderShape3D_wheel")
 
 [node name="CasterRearLeft" type="Node3D" parent="."]
 position = Vector3(-0.48, 0.18, 0.72)
@@ -150,10 +168,6 @@ rotation = Vector3(0, 0, 1.5708)
 mesh = SubResource("CylinderMesh_wheel")
 material_override = SubResource("Material_wheels")
 
-[node name="Collision" type="CollisionShape3D" parent="CasterRearLeft"]
-rotation = Vector3(0, 0, 1.5708)
-shape = SubResource("CylinderShape3D_wheel")
-
 [node name="CasterRearRight" type="Node3D" parent="."]
 position = Vector3(0.48, 0.18, 0.72)
 
@@ -167,6 +181,4 @@ rotation = Vector3(0, 0, 1.5708)
 mesh = SubResource("CylinderMesh_wheel")
 material_override = SubResource("Material_wheels")
 
-[node name="Collision" type="CollisionShape3D" parent="CasterRearRight"]
-rotation = Vector3(0, 0, 1.5708)
-shape = SubResource("CylinderShape3D_wheel")
+

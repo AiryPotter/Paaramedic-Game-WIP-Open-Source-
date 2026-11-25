@@ -22,6 +22,7 @@ var _stretcher_facing_yaw_offset: float = 0.0
 
 const STRETCHER_CAMERA_RADIUS: float = 4.5
 const STRETCHER_CAMERA_TARGET_HEIGHT: float = 1.0
+const MOVEMENT_DEADZONE: float = 0.12
 @onready var player_camera: Camera3D = $Camera3D
 
 
@@ -32,11 +33,20 @@ func _ready() -> void:
 
 
 func set_movement_input(input_vector: Vector2) -> void:
-	movement_input = input_vector.limit_length(1.0)
+	movement_input = _apply_movement_deadzone(input_vector)
 
 
 func set_look_movement_input(input_vector: Vector2) -> void:
-	look_movement_input = input_vector.limit_length(1.0)
+	look_movement_input = _apply_movement_deadzone(input_vector)
+
+
+func _apply_movement_deadzone(input_vector: Vector2) -> Vector2:
+	var limited_input := input_vector.limit_length(1.0)
+	var input_strength := limited_input.length()
+	if input_strength <= MOVEMENT_DEADZONE:
+		return Vector2.ZERO
+	var adjusted_strength := (input_strength - MOVEMENT_DEADZONE) / (1.0 - MOVEMENT_DEADZONE)
+	return limited_input.normalized() * adjusted_strength
 
 
 func _combined_movement_input() -> Vector2:
@@ -48,8 +58,13 @@ func apply_look(look_delta: Vector2) -> void:
 		_stretcher_camera_yaw = wrapf(_stretcher_camera_yaw - look_delta.x, -PI, PI)
 		_stretcher_camera_pitch = clampf(_stretcher_camera_pitch - look_delta.y, -0.75, -0.12)
 		if is_instance_valid(_camera_tween) and _camera_tween.is_running():
-			_camera_tween.kill()
-		_update_stretcher_camera_orbit()
+			_transition_camera(
+				_stretcher_camera_local_position(),
+				Vector3(_stretcher_camera_pitch, _stretcher_camera_yaw, 0.0),
+				78.0
+			)
+		else:
+			_update_stretcher_camera_orbit()
 		return
 	rotation.y -= look_delta.x
 	player_camera.rotation.x = clampf(
@@ -68,8 +83,8 @@ func enter_stretcher_mode(stretcher: RigidBody3D, facing_yaw_offset: float = 0.0
 	rotation.y = stretcher.rotation.y + _stretcher_facing_yaw_offset
 	_walk_camera_rotation = player_camera.rotation
 	_transition_camera(
-		Vector3(0.0, 2.6, 4.2),
-		Vector3(-0.28, 0.0, 0.0),
+		_stretcher_camera_local_position(),
+		Vector3(_stretcher_camera_pitch, _stretcher_camera_yaw, 0.0),
 		78.0
 	)
 
@@ -82,14 +97,18 @@ func exit_stretcher_mode() -> void:
 	_transition_camera(_walk_camera_position, _walk_camera_rotation, _walk_camera_fov)
 
 
-func _update_stretcher_camera_orbit() -> void:
+func _stretcher_camera_local_position() -> Vector3:
 	var elevation := -_stretcher_camera_pitch
 	var horizontal_radius := STRETCHER_CAMERA_RADIUS * cos(elevation)
-	player_camera.position = Vector3(
+	return Vector3(
 		sin(_stretcher_camera_yaw) * horizontal_radius,
 		STRETCHER_CAMERA_TARGET_HEIGHT + STRETCHER_CAMERA_RADIUS * sin(elevation),
 		cos(_stretcher_camera_yaw) * horizontal_radius
 	)
+
+
+func _update_stretcher_camera_orbit() -> void:
+	player_camera.position = _stretcher_camera_local_position()
 	player_camera.rotation = Vector3(_stretcher_camera_pitch, _stretcher_camera_yaw, 0.0)
 
 
@@ -103,6 +122,14 @@ func _transition_camera(target_position: Vector3, target_rotation: Vector3, targ
 	_camera_tween.tween_property(player_camera, "position", target_position, 0.65)
 	_camera_tween.tween_property(player_camera, "rotation", target_rotation, 0.65)
 	_camera_tween.tween_property(player_camera, "fov", target_fov, 0.65)
+
+
+func _apply_stretcher_bump_impulses(impact_velocity: Vector3) -> void:
+	for collision_index in range(get_slide_collision_count()):
+		var collision := get_slide_collision(collision_index)
+		var collider := collision.get_collider()
+		if collider is RigidBody3D and collider.is_in_group("grabbable_stretcher"):
+			collider.call("apply_character_bump", impact_velocity, collision.get_normal())
 
 
 func _physics_process(delta: float) -> void:
@@ -119,7 +146,6 @@ func _physics_process(delta: float) -> void:
 	var local_direction := Vector3(current_movement.x, 0.0, current_movement.y)
 	var world_direction := global_basis * local_direction
 	world_direction.y = 0.0
-	world_direction = world_direction.normalized() if world_direction.length_squared() > 0.0 else Vector3.ZERO
 	var target_velocity := world_direction * move_speed
 	velocity.x = move_toward(velocity.x, target_velocity.x, ground_acceleration * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, ground_acceleration * delta)
@@ -129,4 +155,6 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
+	var impact_velocity := velocity
 	move_and_slide()
+	_apply_stretcher_bump_impulses(impact_velocity)

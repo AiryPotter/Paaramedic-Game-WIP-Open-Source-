@@ -8,6 +8,13 @@ class_name StretcherController
 @export var maximum_turn_speed: float = 0.8
 @export var turn_acceleration: float = 3.5
 @export var caster_swivel_speed: float = 8.0
+@export var maximum_steer_angle: float = 0.4
+@export var minimum_bump_speed: float = 0.8
+@export var bump_impulse_scale: float = 0.12
+@export var maximum_bump_impulse: float = 16.0
+@export var bump_cooldown: float = 0.3
+
+const WHEELBASE: float = 1.44
 
 var operator: CharacterBody3D
 var operator_input: Vector2 = Vector2.ZERO
@@ -20,6 +27,10 @@ var rear_casters_locked: bool = false
 
 var _front_casters: Array[Node3D] = []
 var _rear_casters: Array[Node3D] = []
+var _front_wheel_colliders: Array[CollisionShape3D] = []
+var _rear_wheel_colliders: Array[CollisionShape3D] = []
+var _current_steer_angle: float = 0.0
+var _bump_cooldown_remaining: float = 0.0
 var _front_width_tween: Tween
 var _rear_width_tween: Tween
 var _front_lever_tween: Tween
@@ -29,6 +40,15 @@ var _rear_lever_tween: Tween
 func _ready() -> void:
 	_front_casters = [$CasterFrontLeft as Node3D, $CasterFrontRight as Node3D]
 	_rear_casters = [$CasterRearLeft as Node3D, $CasterRearRight as Node3D]
+	_front_wheel_colliders = [
+		$WheelCollisionFrontLeft as CollisionShape3D,
+		$WheelCollisionFrontRight as CollisionShape3D
+	]
+	_rear_wheel_colliders = [
+		$WheelCollisionRearLeft as CollisionShape3D,
+		$WheelCollisionRearRight as CollisionShape3D
+	]
+	_sync_wheel_colliders()
 
 
 func grab(player: CharacterBody3D) -> bool:
@@ -175,7 +195,7 @@ func _animate_lock_lever(path: NodePath, locked: bool, is_front: bool) -> void:
 
 
 func _steer_free_casters(casters: Array[Node3D], local_direction: Vector3, delta: float) -> void:
-	if local_direction.length_squared() < 0.01:
+	if local_direction.length_squared() < 0.0001:
 		return
 	var target_yaw := atan2(-local_direction.x, -local_direction.z)
 	for caster in casters:
@@ -186,48 +206,116 @@ func _steer_free_casters(casters: Array[Node3D], local_direction: Vector3, delta
 		)
 
 
+func _steer_caster_pair_to_angle(casters: Array[Node3D], target_angle: float, delta: float) -> void:
+	for caster in casters:
+		caster.rotation.y = lerp_angle(
+			caster.rotation.y,
+			target_angle,
+			clampf(caster_swivel_speed * delta, 0.0, 1.0)
+		)
+
+
+func _sync_wheel_colliders() -> void:
+	var wheel_local_transform := Transform3D(
+		Basis(Vector3(0.0, 0.0, 1.0), PI * 0.5),
+		Vector3.ZERO
+	)
+	for index in range(_front_casters.size()):
+		_front_wheel_colliders[index].transform = _front_casters[index].transform * wheel_local_transform
+		_rear_wheel_colliders[index].transform = _rear_casters[index].transform * wheel_local_transform
+
+
+func apply_character_bump(player_velocity: Vector3, surface_normal: Vector3) -> void:
+	if is_instance_valid(operator) or _bump_cooldown_remaining > 0.0:
+		return
+	var push_direction := -surface_normal
+	push_direction.y = 0.0
+	if push_direction.length_squared() < 0.001:
+		return
+	push_direction = push_direction.normalized()
+	var impact_velocity := Vector3(player_velocity.x, 0.0, player_velocity.z)
+	var impact_speed := impact_velocity.dot(push_direction)
+	if impact_speed < minimum_bump_speed:
+		return
+	var impulse_strength := clampf(
+		(impact_speed - minimum_bump_speed) * mass * bump_impulse_scale,
+		0.0,
+		maximum_bump_impulse
+	)
+	if impulse_strength <= 0.0:
+		return
+	can_sleep = true
+	sleeping = false
+	apply_central_impulse(push_direction * impulse_strength)
+	_bump_cooldown_remaining = bump_cooldown
+
+
 func _physics_process(delta: float) -> void:
+	_bump_cooldown_remaining = maxf(_bump_cooldown_remaining - delta, 0.0)
+	_sync_wheel_colliders()
 	if not is_instance_valid(operator):
 		operator = null
 		operator_input = Vector2.ZERO
+		_apply_wheel_constraints()
 		return
 
 	var longitudinal_input := -operator_input.y
 	var lateral_input := operator_input.x
-	var local_forward_motion := operator_forward_local * longitudinal_input
+	var desired_local := operator_forward_local * longitudinal_input + operator_right_local * lateral_input
 	var target_horizontal_velocity := Vector3.ZERO
 	var target_turn_speed := 0.0
 
 	if are_both_casters_unlocked():
-		var free_direction := local_forward_motion + operator_right_local * lateral_input
-		if free_direction.length_squared() > 0.01:
-			var world_direction := global_basis * free_direction.normalized()
-			target_horizontal_velocity = world_direction * maximum_speed
-		_steer_free_casters(_front_casters, free_direction, delta)
-		_steer_free_casters(_rear_casters, free_direction, delta)
+		var world_direction := global_basis * desired_local
+		target_horizontal_velocity = world_direction * maximum_speed
+		_steer_free_casters(_front_casters, desired_local, delta)
+		_steer_free_casters(_rear_casters, desired_local, delta)
 	else:
-		# The operator's facing at grab time defines forward/reverse for the drive.
-		var world_forward := global_basis * operator_forward_local
-		target_horizontal_velocity = world_forward * (longitudinal_input * maximum_speed)
+		# Caster locks hold swivel angle only; wheels still roll along the stretcher axis.
+		var drive_speed := -desired_local.z * maximum_speed
+		target_horizontal_velocity = global_basis * Vector3(0.0, 0.0, -drive_speed)
 
-		if front_casters_locked and not rear_casters_locked:
-			# Rear pair is the drive/steering pair when the front is locked.
-			var rear_steer_direction := local_forward_motion - operator_right_local * (lateral_input * 0.4)
-			_steer_free_casters(_rear_casters, rear_steer_direction, delta)
-			target_turn_speed = lateral_input * maximum_turn_speed * _body_drive_sign(longitudinal_input)
-		elif rear_casters_locked and not front_casters_locked:
-			# Front pair is the drive/steering pair when the rear is locked.
-			var front_steer_direction := local_forward_motion + operator_right_local * (lateral_input * 0.4)
-			_steer_free_casters(_front_casters, front_steer_direction, delta)
-			target_turn_speed = -lateral_input * maximum_turn_speed * _body_drive_sign(longitudinal_input)
-		# With both pairs locked, it rolls straight along the operator's facing axis.
+		var exactly_one_pair_locked := front_casters_locked != rear_casters_locked
+		if exactly_one_pair_locked:
+			var is_side_operator := absf(operator_offset.x) > absf(operator_offset.z)
+			var target_steer_angle := _current_steer_angle
+			if is_side_operator:
+				if absf(drive_speed) > 0.05:
+					target_steer_angle = -desired_local.x * signf(drive_speed) * maximum_steer_angle
+			else:
+				target_steer_angle = -lateral_input * maximum_steer_angle
+			_current_steer_angle = move_toward(
+				_current_steer_angle,
+				target_steer_angle,
+				caster_swivel_speed * delta
+			)
+
+			var yaw_rate := drive_speed * tan(_current_steer_angle) / WHEELBASE
+			if front_casters_locked:
+				# Rear steering swings the trailing end in forklift style.
+				_steer_caster_pair_to_angle(_rear_casters, _current_steer_angle, delta)
+				yaw_rate = -yaw_rate
+			else:
+				_steer_caster_pair_to_angle(_front_casters, _current_steer_angle, delta)
+			target_turn_speed = clampf(yaw_rate, -maximum_turn_speed, maximum_turn_speed)
+		else:
+			_current_steer_angle = 0.0
+		# With both pairs locked, constraints below still allow straight rolling.
 
 	linear_velocity.x = move_toward(linear_velocity.x, target_horizontal_velocity.x, drive_acceleration * delta)
 	linear_velocity.z = move_toward(linear_velocity.z, target_horizontal_velocity.z, drive_acceleration * delta)
 	angular_velocity.y = move_toward(angular_velocity.y, target_turn_speed, turn_acceleration * delta)
+	_apply_wheel_constraints()
 
 
-func _body_drive_sign(longitudinal_input: float) -> float:
-	if is_zero_approx(longitudinal_input) or absf(operator_forward_local.z) < 0.1:
-		return 0.0
-	return signf(-operator_forward_local.z) * signf(longitudinal_input)
+func _apply_wheel_constraints() -> void:
+	if are_both_casters_unlocked():
+		return
+	var local_velocity := global_basis.inverse() * linear_velocity
+	if front_casters_locked and rear_casters_locked:
+		angular_velocity.y = 0.0
+		local_velocity.x = 0.0
+	else:
+		var locked_axle_z := -0.72 if front_casters_locked else 0.72
+		local_velocity.x = -angular_velocity.y * locked_axle_z
+	linear_velocity = global_basis * local_velocity
