@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://bl1m6lkwlffoi"]
+[gd_scene load_steps=20 format=3 uid="uid://bl1m6lkwlffoi"]
 
 [ext_resource type="Script" uid="uid://bdagxbsb8gt" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://b3jawsy5my7sg" path="res://ui/mobile_controls.gd" id="2_mobile_controls"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/equipment/secondary_bag.tscn" id="5_secondary_bag"]
 [ext_resource type="Script" path="res://scripts/interaction/pickup_interactor.gd" id="4_pickup_interactor"]
 [ext_resource type="PackedScene" path="res://scenes/stretcher/stretcher.tscn" id="6_stretcher"]
+[ext_resource type="PackedScene" path="res://scenes/equipment/defibrillator.tscn" id="7_defibrillator"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
 size = Vector3(24, 0.2, 24)
@@ -119,6 +120,9 @@ position = Vector3(-1.0, 0.23, 2.7)
 
 [node name="SecondaryBag" parent="." instance=ExtResource("5_secondary_bag")]
 position = Vector3(1.0, 0.19, 2.7)
+
+[node name="Defibrillator" parent="." instance=ExtResource("7_defibrillator")]
+position = Vector3(0, 0.16, 2.7)
 
 [node name="Stretcher" parent="." instance=ExtResource("6_stretcher")]
 position = Vector3(0, 0.12, 0.8)

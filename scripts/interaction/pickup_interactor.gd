@@ -136,5 +136,7 @@ func _toss_held_object() -> void:
 	forward.y = 0.0
 	forward = forward.normalized()
 	var toss_velocity := (forward + Vector3.UP * 0.35).normalized() * maximum_toss_speed
+	if held_object.has_method("on_tossed"):
+		held_object.call("on_tossed")
 	held_object.release(hold_point.global_transform, toss_velocity)
 	held_object = null

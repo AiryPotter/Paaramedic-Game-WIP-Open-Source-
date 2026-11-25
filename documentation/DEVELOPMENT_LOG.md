@@ -55,3 +55,9 @@
 - Locking a caster pair now snaps its wheels straight immediately. While operating the stretcher, the left pad drives and the right LOOK pad orbits the camera around the character; dragging right moves the camera around to the left, and vice versa.
 - Stretcher drive direction and operator facing are captured at grab time. With the front pair locked, the rear free pair drives/steers; with the rear pair locked, the front free pair drives/steers. The support collider is lifted slightly so the caster wheels, rather than the broad underside, carry the stretcher across the floor.
 - Runtime validation is pending: verify steering and movement with each lock combination and operator end, lock/unlock animations, camera orbit, both-side interaction, bag reach/toss distance, and joystick recovery after interrupting touch input.
+
+## Milestone 7 — ZOLL defibrillator equipment
+
+- Added a low-poly, pickupable ZOLL-style defibrillator to the training scene.
+- Tossing it reveals a persistent cracked-screen overlay. Ordinary drop/release does not crack it, and the damage is visual only.
+- Runtime validation is pending: confirm pickup, normal drop without damage, and screen crack after toss.
