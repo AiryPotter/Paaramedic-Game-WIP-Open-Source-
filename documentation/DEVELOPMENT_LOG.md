@@ -71,3 +71,16 @@
 - Increased caster swivel response, steering angle, turn acceleration, and turn-speed cap for quicker steering; broader turning-radius tuning remains deferred.
 - KOLE cracks on hard impacts except for contacts with the padded stretcher top.
 - Runtime validation is pending: test immediate sticking across the full pad, overhanging items, pickup after sticking, hard/soft KOLE impacts, quicker steering in both directions with the rear pair locked, deck travel, and wheel contact.
+
+## Milestone 9 — First patient encounter
+
+- Added a non-graphic low-poly training patient with a contextual assessment interaction and fixed fictional initial observations.
+- Added a compact touch-safe status panel that guides the player to the patient, then displays the assessment. The panel explicitly marks the values as simulated and not clinical guidance.
+- Added `documentation/GAME_DESIGN.md` with the case-driven core loop and staged roadmap. No treatment advice or real clinical protocol is presented in this milestone.
+- Runtime validation is pending: confirm the patient is visible and reachable, the button changes to ASSESS PATIENT when aimed within range, assessment text updates, and the top panel does not interfere with touch controls.
+
+## Milestone 10 — Deliberate stretcher push
+
+- Added a contextual PUSH control while operating the stretcher. It releases the operator and applies a capped impulse in the direction the operator faces; with casters locked, the push projects onto the stretcher's long axis and indicates when the operator should align first.
+- Moved locked-caster velocity constraints into `_integrate_forces()` so they use the live physics state rather than potentially overwriting a same-tick bump or push.
+- Runtime validation is pending: test PUSH at rest and while moving in all caster-lock combinations, confirm a side-facing push is blocked when casters are locked, and check that bumps still move a locked stretcher.

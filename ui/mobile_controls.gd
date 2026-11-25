@@ -13,7 +13,10 @@ const JOYSTICK_MARGIN: float = 92.0
 var player: PlayerController
 var interactor: Node
 var interaction_button: Button
+var status_panel: PanelContainer
+var status_label: Label
 var toss_button: Button
+var push_button: Button
 var front_lock_button: Button
 var rear_lock_button: Button
 var joystick_touch_id: int = -1
@@ -28,8 +31,10 @@ func _ready() -> void:
 	player = get_node(player_path) as PlayerController
 	interactor = get_node(interactor_path)
 	_build_interaction_button()
+	_build_status_panel()
 	_build_toss_button()
 	_build_lock_buttons()
+	_build_push_button()
 	_last_stretcher_grabbed = bool(interactor.call("is_stretcher_grabbed"))
 	resized.connect(_reset_touch_state)
 	queue_redraw()
@@ -39,6 +44,9 @@ func _process(_delta: float) -> void:
 	var action_label := str(interactor.call("get_action_label"))
 	if interaction_button.text != action_label:
 		interaction_button.text = action_label
+	var current_status := str(interactor.call("get_status_text"))
+	if status_label.text != current_status:
+		status_label.text = current_status
 	toss_button.visible = bool(interactor.call("has_held_object"))
 	var stretcher_grabbed := bool(interactor.call("is_stretcher_grabbed"))
 	if stretcher_grabbed != _last_stretcher_grabbed:
@@ -48,6 +56,9 @@ func _process(_delta: float) -> void:
 	rear_lock_button.visible = stretcher_grabbed
 	front_lock_button.text = str(interactor.call("get_front_lock_label"))
 	rear_lock_button.text = str(interactor.call("get_rear_lock_label"))
+	push_button.visible = stretcher_grabbed
+	push_button.text = str(interactor.call("get_push_label"))
+	push_button.disabled = not bool(interactor.call("can_push_stretcher"))
 	if look_touch_id != -1 and bool(interactor.call("look_control_moves")):
 		player.set_look_movement_input(look_offset / JOYSTICK_RADIUS)
 	else:
@@ -97,6 +108,8 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 
 
 func _touch_hits_control(touch_position: Vector2) -> bool:
+	if status_panel.get_global_rect().has_point(touch_position):
+		return true
 	if interaction_button.get_global_rect().has_point(touch_position):
 		return true
 	if toss_button.visible and toss_button.get_global_rect().has_point(touch_position):
@@ -104,6 +117,8 @@ func _touch_hits_control(touch_position: Vector2) -> bool:
 	if front_lock_button.visible and front_lock_button.get_global_rect().has_point(touch_position):
 		return true
 	if rear_lock_button.visible and rear_lock_button.get_global_rect().has_point(touch_position):
+		return true
+	if push_button.visible and push_button.get_global_rect().has_point(touch_position):
 		return true
 	return false
 
@@ -160,7 +175,7 @@ func _build_interaction_button() -> void:
 	interaction_button = Button.new()
 	interaction_button.name = "InteractionButton"
 	interaction_button.text = "INTERACT"
-	interaction_button.tooltip_text = "Aim at a pickupable object to pick it up or release it."
+	interaction_button.tooltip_text = "Aim at a patient to assess or an item to pick it up."
 	interaction_button.focus_mode = Control.FOCUS_NONE
 	interaction_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	interaction_button.anchor_left = 0.5
@@ -188,11 +203,46 @@ func _build_interaction_button() -> void:
 	add_child(interaction_button)
 
 
+func _build_status_panel() -> void:
+	status_panel = PanelContainer.new()
+	status_panel.name = "StatusPanel"
+	status_panel.anchor_left = 0.0
+	status_panel.anchor_right = 1.0
+	status_panel.anchor_top = 0.0
+	status_panel.anchor_bottom = 0.0
+	status_panel.offset_left = 16.0
+	status_panel.offset_right = -16.0
+	status_panel.offset_top = 16.0
+	status_panel.offset_bottom = 124.0
+	status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.04, 0.14, 0.19, 0.92)
+	panel_style.set_corner_radius_all(12)
+	panel_style.set_border_width_all(1)
+	panel_style.border_color = Color(0.55, 0.72, 0.78, 0.9)
+	panel_style.content_margin_left = 14.0
+	panel_style.content_margin_right = 14.0
+	panel_style.content_margin_top = 8.0
+	panel_style.content_margin_bottom = 8.0
+	status_panel.add_theme_stylebox_override("panel", panel_style)
+
+	status_label = Label.new()
+	status_label.name = "StatusText"
+	status_label.text = str(interactor.call("get_status_text"))
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.add_theme_font_size_override("font_size", 15)
+	status_label.add_theme_color_override("font_color", Color(0.93, 0.96, 0.98, 1.0))
+	status_panel.add_child(status_label)
+	add_child(status_panel)
+
+
 func _build_toss_button() -> void:
 	toss_button = Button.new()
 	toss_button.name = "TossButton"
 	toss_button.text = "TOSS"
-	toss_button.tooltip_text = "Give the carried bag a short underhand toss."
+	toss_button.tooltip_text = "Give the carried item a short underhand toss."
 	toss_button.visible = false
 	toss_button.focus_mode = Control.FOCUS_NONE
 	toss_button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -214,6 +264,38 @@ func _build_toss_button() -> void:
 	toss_button.add_theme_stylebox_override("normal", toss_style)
 	toss_button.pressed.connect(_on_toss_pressed)
 	add_child(toss_button)
+
+
+func _build_push_button() -> void:
+	push_button = Button.new()
+	push_button.name = "PushButton"
+	push_button.text = "PUSH"
+	push_button.tooltip_text = "Release and push the stretcher along the direction you face."
+	push_button.visible = false
+	push_button.focus_mode = Control.FOCUS_NONE
+	push_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	push_button.anchor_left = 0.5
+	push_button.anchor_right = 0.5
+	push_button.anchor_top = 1.0
+	push_button.anchor_bottom = 1.0
+	push_button.offset_left = -110.0
+	push_button.offset_right = 110.0
+	push_button.offset_top = -366.0
+	push_button.offset_bottom = -302.0
+	push_button.add_theme_font_size_override("font_size", 16)
+	push_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.34, 0.32, 0.96)
+	style.set_corner_radius_all(10)
+	style.set_border_width_all(2)
+	style.border_color = Color(0.65, 0.9, 0.83, 0.95)
+	push_button.add_theme_stylebox_override("normal", style)
+	push_button.pressed.connect(_on_push_pressed)
+	add_child(push_button)
+
+
+func _on_push_pressed() -> void:
+	interactor.call("request_push")
 
 
 func _build_lock_buttons() -> void:

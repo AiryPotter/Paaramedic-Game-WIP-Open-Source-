@@ -138,6 +138,40 @@ func get_rear_lock_label() -> String:
 	return "REAR: LOCKED" if rear_casters_locked else "REAR: FREE"
 
 
+func can_push_from_operator(player: CharacterBody3D) -> bool:
+	if not is_instance_valid(operator) or operator != player:
+		return false
+	var push_direction := -player.global_basis.z
+	push_direction.y = 0.0
+	if push_direction.length_squared() < 0.01:
+		return false
+	if are_both_casters_unlocked():
+		return true
+	var local_direction := global_basis.inverse() * push_direction.normalized()
+	return absf(local_direction.z) >= 0.15
+
+
+func push_from_operator(player: CharacterBody3D) -> bool:
+	if not can_push_from_operator(player):
+		return false
+
+	var push_direction := -player.global_basis.z
+	push_direction.y = 0.0
+	push_direction = push_direction.normalized()
+	if not are_both_casters_unlocked():
+		var local_direction := global_basis.inverse() * push_direction
+		push_direction = global_basis * Vector3(0.0, 0.0, local_direction.z).normalized()
+		push_direction.y = 0.0
+		push_direction = push_direction.normalized()
+
+	var current_velocity := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+	var target_velocity := (current_velocity + push_direction * maximum_speed).limit_length(maximum_speed)
+	release(player)
+	apply_central_impulse((target_velocity - current_velocity) * mass)
+	sleeping = false
+	return true
+
+
 func _set_front_casters_locked(locked: bool) -> void:
 	if front_casters_locked == locked:
 		return
@@ -279,7 +313,6 @@ func _physics_process(delta: float) -> void:
 	if not is_instance_valid(operator):
 		operator = null
 		operator_input = Vector2.ZERO
-		_apply_wheel_constraints()
 		return
 
 	var longitudinal_input := -operator_input.y
@@ -328,17 +361,19 @@ func _physics_process(delta: float) -> void:
 	linear_velocity.x = move_toward(linear_velocity.x, target_horizontal_velocity.x, drive_acceleration * delta)
 	linear_velocity.z = move_toward(linear_velocity.z, target_horizontal_velocity.z, drive_acceleration * delta)
 	angular_velocity.y = move_toward(angular_velocity.y, target_turn_speed, turn_acceleration * delta)
-	_apply_wheel_constraints()
 
 
-func _apply_wheel_constraints() -> void:
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	if are_both_casters_unlocked():
 		return
-	var local_velocity := global_basis.inverse() * linear_velocity
+
+	var local_velocity := global_basis.inverse() * state.linear_velocity
+	var constrained_angular_velocity := state.angular_velocity
 	if front_casters_locked and rear_casters_locked:
-		angular_velocity.y = 0.0
+		constrained_angular_velocity.y = 0.0
 		local_velocity.x = 0.0
 	else:
 		var locked_axle_z := -WHEELBASE * 0.5 if front_casters_locked else WHEELBASE * 0.5
-		local_velocity.x = -angular_velocity.y * locked_axle_z
-	linear_velocity = global_basis * local_velocity
+		local_velocity.x = -constrained_angular_velocity.y * locked_axle_z
+	state.linear_velocity = global_basis * local_velocity
+	state.angular_velocity = constrained_angular_velocity

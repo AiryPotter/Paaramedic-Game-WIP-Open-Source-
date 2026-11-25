@@ -1,0 +1,101 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/patient/training_patient.gd" id="1_patient"]
+
+[sub_resource type="BoxMesh" id="Mesh_torso"]
+size = Vector3(0.55, 0.3, 0.8)
+
+[sub_resource type="BoxMesh" id="Mesh_hips"]
+size = Vector3(0.46, 0.24, 0.48)
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+radius = 0.15
+height = 0.3
+radial_segments = 12
+rings = 6
+
+[sub_resource type="CapsuleMesh" id="Mesh_arm"]
+radius = 0.065
+height = 0.72
+
+[sub_resource type="CapsuleMesh" id="Mesh_leg"]
+radius = 0.09
+height = 0.92
+
+[sub_resource type="BoxMesh" id="Mesh_shoe"]
+size = Vector3(0.18, 0.12, 0.24)
+
+[sub_resource type="BoxShape3D" id="Shape_patient"]
+size = Vector3(0.9, 0.6, 2.1)
+
+[sub_resource type="StandardMaterial3D" id="Material_skin"]
+albedo_color = Color(0.72, 0.48, 0.34, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_shirt"]
+albedo_color = Color(0.09, 0.32, 0.39, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_pants"]
+albedo_color = Color(0.15, 0.19, 0.25, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_shoes"]
+albedo_color = Color(0.08, 0.09, 0.1, 1)
+roughness = 1.0
+
+[node name="TrainingPatient" type="StaticBody3D" groups=["training_patient"]]
+script = ExtResource("1_patient")
+
+[node name="BodyCollision" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.3, 0)
+shape = SubResource("Shape_patient")
+
+[node name="Torso" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.3, 0)
+mesh = SubResource("Mesh_torso")
+material_override = SubResource("Material_shirt")
+
+[node name="Hips" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.29, 0.56)
+mesh = SubResource("Mesh_hips")
+material_override = SubResource("Material_pants")
+
+[node name="Head" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.36, -0.58)
+mesh = SubResource("Mesh_head")
+material_override = SubResource("Material_skin")
+
+[node name="LeftArm" type="MeshInstance3D" parent="."]
+position = Vector3(-0.37, 0.3, 0.05)
+rotation = Vector3(1.5707963, 0, 0)
+mesh = SubResource("Mesh_arm")
+material_override = SubResource("Material_skin")
+
+[node name="RightArm" type="MeshInstance3D" parent="."]
+position = Vector3(0.37, 0.3, 0.05)
+rotation = Vector3(1.5707963, 0, 0)
+mesh = SubResource("Mesh_arm")
+material_override = SubResource("Material_skin")
+
+[node name="LeftLeg" type="MeshInstance3D" parent="."]
+position = Vector3(-0.15, 0.2, 0.98)
+rotation = Vector3(1.5707963, 0, 0)
+mesh = SubResource("Mesh_leg")
+material_override = SubResource("Material_pants")
+
+[node name="RightLeg" type="MeshInstance3D" parent="."]
+position = Vector3(0.15, 0.2, 0.98)
+rotation = Vector3(1.5707963, 0, 0)
+mesh = SubResource("Mesh_leg")
+material_override = SubResource("Material_pants")
+
+[node name="LeftShoe" type="MeshInstance3D" parent="."]
+position = Vector3(-0.15, 0.13, 1.4)
+mesh = SubResource("Mesh_shoe")
+material_override = SubResource("Material_shoes")
+
+[node name="RightShoe" type="MeshInstance3D" parent="."]
+position = Vector3(0.15, 0.13, 1.4)
+mesh = SubResource("Mesh_shoe")
+material_override = SubResource("Material_shoes")
