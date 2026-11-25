@@ -72,8 +72,15 @@
 - **Files:** `scripts/stretcher/stretcher_controller.gd:12-15, 228-250`, `scenes/stretcher/stretcher.tscn:55`
 - **Issue:** A full-speed bump gives about **0.38 m/s**, which coasts about **9 cm**. While blocked, the player only regains about 0.3 m/s per tick, below the 0.8 threshold, so leaning on it does little more. Raising `linear_damp` from 0.5 to 1.2 also shortened a full-speed release from about 1.9 m to 1.1 m. (Estimates include Godot's default 0.1 damping.)
 - **Also:** Bump strength uses player speed, not speed relative to the stretcher.
-- **Maintainer decision so far:** the player can push the stretcher so that it coasts. Bumping is there; the PUSH button from review 1 item 11 is not.
-- **Proposed change:** Add the PUSH button (2.5 m/s cap suggested), use relative speed for bumps, and tune after N1 and N2. For reference, estimated coasting from 2.2 m/s is 1.1 m at damping 1.2 and 1.9 m at 0.5.
+- **Maintainer decision (2026-11-25): keep bumping and add a PUSH button.** Bumping is there; the PUSH button from review 1 item 11 is not.
+- **Proposed change:**
+  - Show PUSH only while the stretcher is grabbed. Add it to `_touch_hits_control`, and keep it clear of the existing buttons.
+  - Queue the request like TOSS, for the physics tick. Release the stretcher, then apply one impulse along the operator's facing: `mass * push_speed`, capped so total speed stays within the limit (2.5 m/s suggested).
+  - With any pair locked, project the direction onto the stretcher's long axis. If the operator faces straight across it, a push has no effect, so disable PUSH there or show why.
+  - Clear any queued INTERACT after a PUSH, so it cannot re-grab.
+  - Use relative speed for bumps, and tune both after N1 and N2.
+  - Coasting distance is still to be decided.
+- **Estimates:** Coasting from 2.2 m/s is 1.1 m at damping 1.2 and 1.9 m at 0.5.
 
 ### N6. A missed touch release can leave the joystick stuck
 - **File:** `ui/mobile_controls.gd:86-94`
@@ -154,6 +161,7 @@ operator_facing_yaw_offset = atan2(-operator_forward_local.x, -operator_forward_
 - [ ] Wheels rest on the floor and the stretcher drives at a reasonable speed.
 - [ ] Bump it with both free, front locked, rear locked, and both locked. Note which ones move.
 - [ ] Bump the free end sideways with one pair locked. Does it swing?
+- [ ] After PUSH is added: push in all four lock states, from both ends and both sides.
 - [ ] Release at full speed in all four lock states. Does the distance feel right?
 - [ ] Steer from both ends and both sides with each pair locked.
 - [ ] Grab at an angle, then push straight forward.
@@ -164,7 +172,7 @@ operator_facing_yaw_offset = atan2(-operator_forward_local.x, -operator_forward_
 
 ## Questions for the maintainer
 
-1. Should pushing be by bumping only, or also a PUSH button?
+1. Answered: bumping plus a PUSH button (see N3).
 2. How far should a full-speed push coast: about 1 m, 2 m, or further?
 3. Should the defibrillator crack when tossed, or only on a hard impact?
 4. Keep the ZOLL name, or use a generic one?
