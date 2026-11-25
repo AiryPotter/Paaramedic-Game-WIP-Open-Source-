@@ -12,7 +12,7 @@
 - Get the maintainer's approval before starting each milestone, and before adding any outside code.
 - Plain GDScript only. Assume Xogot cannot run C# or GDExtension add-ons until tested. See `2026-11-25-open-source-borrowing.md` for license rules and the copy checklist.
 - Every add-on below was checked on 2026-11-25. It is MIT-licensed GDScript unless noted. None have been tested in Xogot.
-- All medical content must come from the maintainer's local protocols and be checked by a qualified clinician.
+- **All medical content follows the maintainer's service protocols,** which the maintainer will provide. A qualified paramedic or instructor reviews it. Until the protocols arrive, do not invent clinical values: use placeholders marked `# PROTOCOL TODO`.
 
 ## Goal
 
@@ -33,6 +33,11 @@ The call: dispatch, arrive, make the scene safe, assess and treat, call backup i
 | Backup behavior | Backup **acts on its own** after arriving |
 | Stretcher width | **Keep 1.0 m.** Build doors and halls larger than real life to fit. |
 | After loading | **Hospital handover:** fade to the hospital, wheel the patient in, give a verbal report |
+| Stairs | **Stair chair:** move the patient down stairs in a stair chair, then transfer to the stretcher |
+| Unneeded backup | **Debrief note only.** No points lost. |
+| How students play | **On the maintainer's iPad in Xogot.** No Mac or TestFlight for the first demo. |
+| Handover format | **MIST** (Mechanism or Medical complaint, Injuries or Illness, Signs, Treatment) |
+| Medical content | **Maintainer's service protocols,** reviewed by a qualified paramedic or instructor |
 
 ## Common game features and what to borrow
 
@@ -51,6 +56,7 @@ The call: dispatch, arrive, make the scene safe, assess and treat, call backup i
 | Ambulance model | [Kenney Car Kit](https://kenney.nl/assets/car-kit) (CC0, includes an ambulance) | No |
 | Furniture, props, UI art | [Kenney assets](https://kenney.nl/assets) (CC0) | No |
 | People and animations | [Quaternius Universal Animation Library](https://quaternius.com/packs/universalanimationlibrary.html) (CC0, has push, sit, crawl, death and more on one humanoid rig) | No |
+| Stair chair | Custom: a carried item with a sitting patient, using the Quaternius sit animation | **Yes** |
 | Patient ragdoll (optional) | `3d/ragdoll_physics` in Godot demos | Small glue only |
 | Patient vitals and condition | Custom. Reference: [Infirmary Integrated](https://github.com/tanjera/infirmary-integrated) (Apache-2.0, C#, read only) | **Yes** |
 | Monitor screen (ECG line, numbers) | Custom `Line2D` drawing. Use Infirmary Integrated as a reference for rhythm shapes. | **Yes** |
@@ -95,16 +101,18 @@ Make what exists reliable before adding features.
 
 - Doorways at least 1.2 m wide, halls at least 1.5 m, and corners with room to turn a 2.2 m stretcher.
 - Make the obstacles come from tight corners, furniture, clutter, rugs or thresholds, and steps, not narrow doors.
-- Stairs: a rolling stretcher cannot climb them. Choose one: a ramp, a "carry down" action with a partner, or keep stairs out of the demo. **Maintainer question 1.**
+- **Stairs (maintainer decision): stair chair.** The stretcher cannot go on stairs. The student leaves it at the bottom, brings a stair chair to the patient, moves the patient onto it, and carries it down with the partner (a short animation, with the player choosing when to start each flight). At the bottom, the patient is moved onto the stretcher.
+  - The stair chair is a new carried item with a seated patient. Moving the patient onto it, and later onto the stretcher, uses the same transfer action as Milestone 12.
+  - Score: chair used on stairs (never the stretcher), and patient secured before moving.
 
 Build:
-- One house scene (living room, hallway, front door, front steps, driveway). Block it out with CSG, then dress it with Kenney furniture and Scatter.
+- One two-level house scene (upstairs bedroom, stairs, living room, hallway, front door, front steps with a ramp or flat path, driveway). Block it out with CSG, then dress it with Kenney furniture and Scatter.
 - Doors that open with INTERACT. Doors need a collider that the stretcher can bump.
 - Optional moveable obstacles (a chair or table that can be pushed aside, using `HoldableObject` or a heavy `RigidBody3D`).
 - Score stretcher handling: count hard hits on walls and furniture, and track time to exit.
 - Bake a navigation mesh so NPCs can walk the same space.
 
-**Done when:** the stretcher can be steered from the living room to the driveway, and it is hard without being frustrating.
+**Done when:** the patient can be brought down the stairs in the stair chair, and the stretcher can be steered from the living room to the driveway. It should be hard without being frustrating.
 
 ### Milestone 12: People
 
@@ -150,7 +158,7 @@ The core of the trainer. Build it ourselves, keeping it simple.
 
 **Done when:** each backup type can be called, arrives after its ETA, and does its job without input, and the doctor call can end resuscitation.
 
-**Maintainer question 2:** should calling backup that isn't needed lose points?
+**Maintainer decision: unneeded backup costs no points.** The debrief notes that it was not needed and why. Missing backup that was needed still loses points.
 
 ### Milestone 16: Ambulance, loading and hospital handover
 
@@ -159,7 +167,7 @@ The core of the trainer. Build it ourselves, keeping it simple.
 - Kenney Car Kit ambulance parked in the driveway, with rear doors that open.
 - Loading: bring the stretcher to the rear, press LOAD, and play a short animation of it sliding in. Check alignment and speed before allowing it.
 - Fade to a simple hospital bay. Wheel the patient to the bed.
-- **Verbal handover** with a Dialogue Manager menu. The student chooses report items in order using the maintainer's handover format (for example MIST or SBAR). Score completeness and order.
+- **Verbal handover in MIST format** (maintainer decision), with a Dialogue Manager menu. The student picks report items for each part: Mechanism or Medical complaint, Injuries or Illness, Signs (vitals and trends), Treatment given. Score completeness, accuracy against the event log, and order.
 - Driving can be a later milestone. The `3d/truck_town` demo and `VehicleBody3D` are a starting point.
 
 **Done when:** the patient can be loaded and handed over, and the report is scored.
@@ -169,7 +177,7 @@ The core of the trainer. Build it ourselves, keeping it simple.
 - Write the first full scenario with the maintainer (for example a cardiac arrest in a cluttered house, with an aggressive family member).
 - Scoring rubric from the event log: scene safety, assessment steps, treatments and timing, backup requests, stretcher handling, handover.
 - Debrief screen: score per section, timeline of what the student did, and what was missed with a short reason.
-- Save results to a local JSON file so the instructor can see them.
+- Save results to a local JSON file (`user://results/`). Students share the maintainer's iPad, so ask for a student name or ID before each call, and add a results history screen for the instructor.
 
 **Done when:** a student can play the call and get a fair, explained score.
 
@@ -182,7 +190,7 @@ The core of the trainer. Build it ourselves, keeping it simple.
 - Performance: test frame rate on the oldest iPad the class uses.
 - `THIRD_PARTY_NOTICES.md` complete and shown in credits.
 - Playtest with 2 or 3 students, fix the top issues.
-- **Maintainer question 3:** how will students get the demo? Xogot can run the project on the maintainer's iPad, but installing on other iPads needs an export through Godot on a Mac with Xcode, usually through TestFlight.
+- **Maintainer decision: students play on the maintainer's iPad in Xogot.** Make the game start cleanly from Xogot's run button to the main menu, and hide debug tools. A TestFlight build on students' own iPads (needs a Mac with Xcode and an Apple Developer account) can come after the demo.
 
 **Done when:** students can play the full call on iPad without help.
 
@@ -197,9 +205,9 @@ The core of the trainer. Build it ourselves, keeping it simple.
 
 Milestones 11 and 14 can run side by side once 10 is done. Do not start 15 before 14, because backup changes the patient's condition.
 
-## Questions for the maintainer
+## Questions for the maintainer (all answered)
 
-1. Stairs: ramp, carry-down action, or no stairs in the demo?
-2. Should requesting backup that isn't needed cost points?
-3. How will students install the demo: TestFlight from a Mac, or play on the maintainer's iPad?
-4. Which protocols and handover format (for example MIST or SBAR) should the content follow, and who will check it clinically?
+1. Stairs: stair chair (Milestone 11).
+2. Unneeded backup: debrief note only, no points lost (Milestone 15).
+3. Demo: played on the maintainer's iPad in Xogot (Milestone 18).
+4. Handover in MIST format. Content follows the maintainer's service protocols, reviewed by a qualified paramedic or instructor. **Still needed: the maintainer sends the protocol documents before Milestone 14.**
