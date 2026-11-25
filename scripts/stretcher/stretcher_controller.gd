@@ -331,13 +331,15 @@ func _physics_process(delta: float) -> void:
 		var drive_speed := -desired_local.z * maximum_speed
 		target_horizontal_velocity = global_basis * Vector3(0.0, 0.0, -drive_speed)
 
+		var actual_local_velocity := global_basis.inverse() * linear_velocity
+		var actual_forward_speed := -actual_local_velocity.z
 		var exactly_one_pair_locked := front_casters_locked != rear_casters_locked
 		if exactly_one_pair_locked:
 			var is_side_operator := absf(operator_offset.x) > absf(operator_offset.z)
 			var target_steer_angle := _current_steer_angle
 			if is_side_operator:
-				if absf(drive_speed) > 0.05:
-					target_steer_angle = -desired_local.x * signf(drive_speed) * maximum_steer_angle
+				if absf(actual_forward_speed) > 0.05:
+					target_steer_angle = -desired_local.x * signf(actual_forward_speed) * maximum_steer_angle
 			else:
 				target_steer_angle = -lateral_input * maximum_steer_angle
 			_current_steer_angle = move_toward(
@@ -346,7 +348,7 @@ func _physics_process(delta: float) -> void:
 				caster_swivel_speed * delta
 			)
 
-			var yaw_rate := drive_speed * tan(_current_steer_angle) / WHEELBASE
+			var yaw_rate := actual_forward_speed * tan(_current_steer_angle) / WHEELBASE
 			if front_casters_locked:
 				# Rear steering swings the trailing end in forklift style.
 				_steer_caster_pair_to_angle(_rear_casters, _current_steer_angle, delta)
