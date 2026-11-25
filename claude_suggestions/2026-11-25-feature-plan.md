@@ -84,7 +84,21 @@ func follow_surface() -> void:  # the stretcher calls this after its own movemen
 - Scale and rotation: build `local_transform` from yaw plus half the item's collision height. Expose that height on `HoldableObject` (bags 0.46 and 0.38, defibrillator 0.30).
 - Items already stuck do not add weight. Revisit this when patient weight is added.
 
-**Defibrillator interaction:** A toss onto the pad could still exceed the 3 m/s crack limit. Suggested rule: the pad is padded, so contacts with the stretcher pad do not crack it. **Maintainer question 1.**
+**Maintainer decision (2026-11-25): landing on the pad never cracks the KOLE, because the pad cushions it.** Hitting the stretcher's sides or legs, or the floor, still can. Add this check to the crack sketch in review 2 item N11, before cracking:
+
+```gdscript
+# In Defibrillator. PAD_TOP_LOCAL_Y = 0.82; keep it in step with the pad's height.
+func _is_touching_pad(state: PhysicsDirectBodyState3D) -> bool:
+	for i in range(state.get_contact_count()):
+		var body := state.get_contact_collider_object(i) as Node3D
+		if body != null and body.is_in_group("grabbable_stretcher"):
+			var local_point := body.to_local(state.get_contact_collider_position(i))
+			if local_point.y >= PAD_TOP_LOCAL_Y - 0.03:
+				return true
+	return false
+```
+
+  Skip the crack when this returns true, but still update `_previous_velocity`. The pad's top edge counts as pad. Check on device that the contact position is in world space, as the sketch assumes.
 
 ## 3. Longer stretcher
 
@@ -164,6 +178,7 @@ if absf(operator_offset.z) > absf(operator_offset.x):
 - [ ] The device reads KOLE.
 - [ ] Toss each bag and the defibrillator onto the pad. Each sticks flat where it landed.
 - [ ] Throw something at the side of the stretcher. It does not stick.
+- [ ] Toss and drop the KOLE onto the pad several times. It never cracks. A hard floor hit still cracks it.
 - [ ] Drive, turn, push and coast with items stuck. They stay in place.
 - [ ] Pick up a stuck item, then drop it on the floor. It collides normally.
 - [ ] The wheels still touch the floor, and the pad looks the right length.
@@ -172,6 +187,6 @@ if absf(operator_offset.z) > absf(operator_offset.x):
 
 ## Questions for the maintainer
 
-1. Should the pad cushion the defibrillator so landing there never cracks it?
+1. Answered: yes, landing on the pad never cracks it (see section 2).
 2. Is 2.20 m long enough?
 3. With both pairs free, should pushing sideways from an end swing the stretcher, slide it, or both (suggested)?
