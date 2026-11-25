@@ -26,7 +26,7 @@
 | 8 | Medium | Joysticks lose analog speed and have no dead zone | Certain |
 | 9 | Medium | Camera transitions can corrupt rotation or FOV | Certain |
 | 10 | Medium | Movement input is wrong entering/leaving stretcher mode | Certain |
-| 11 | Medium | Stretcher keeps momentum on release | Certain |
+| 11 | Medium | Add push-and-coast behavior based on wheel locks | Requested feature |
 | 12 | Medium | No gravity or ground height while operating | Certain |
 | 13 | Medium | A second touch steals the joystick from the first | Certain |
 | 14 | Medium | UI uses fixed pixels, with no stretch or orientation settings | Certain (impact depends on device) |
@@ -45,7 +45,7 @@
 - **Files:** `scenes/stretcher/stretcher.tscn:47-53`, `scripts/stretcher/stretcher_controller.gd:225-226`
 - **Issue:** No `PhysicsMaterial` is set, so default friction (1.0) applies. With default gravity of 9.8, sliding friction can remove about 9.8 m/s² while `drive_acceleration` adds 8.0.
 - **Effect:** In a simple 60 Hz model, speed after 2 s is **0** with friction 1.0 and about **2.2 m/s** with 0.05. The engine's solver may differ, so confirm on device.
-- **Proposed change:** Try a low-friction `PhysicsMaterial` (0.05) together with item 11, so the stretcher does not coast away. Re-tune after item 1.
+- **Proposed change:** Try a low-friction `PhysicsMaterial` (0.05). Item 11 (coasting) depends on this, because high friction would stop the stretcher almost at once. Re-tune after item 1.
 
 ### 3. Free-caster visuals disagree with the turn
 - **File:** `scripts/stretcher/stretcher_controller.gd:213-222`
@@ -67,7 +67,7 @@ var yaw_rate := drive_speed * tan(steer) / wheelbase  # front pair steers
 # If the rear pair steers: -drive_speed * tan(steer) / wheelbase
 ```
 
-- **Maintainer decision (2026-11-25): forklift style.** When the trailing casters steer, stick-right swings the trailing end right and the leading end left. When the leading casters steer, stick-right turns right.
+- **Maintainer decision (2026-11-25): steering depends on which wheels are locked, with forklift style when the trailing casters steer.** Both pairs free: moves in any direction. Both pairs locked: straight only. One pair locked: when the trailing casters steer, stick-right swings the trailing end right and the leading end left. When the leading casters steer, stick-right turns right.
 - **What this means:** The current yaw signs for end operators already do this, so **keep them**. Fix the wheel visuals to match. With the formulas above, one steering angle works for either free pair and from either end:
 
 ```gdscript
@@ -92,7 +92,7 @@ var drive_speed := -desired_local.z * maximum_speed  # along local -Z
 ### 5. Operator follow has no speed or distance limit
 - **File:** `scripts/player/player_controller.gd:109-116`
 - **Issue:** `distance / delta` tries to close the whole gap in one tick. With a 5.5 m reach, a grab can request hundreds of m/s. If an obstacle stops the player, the stretcher still drives away.
-- **Proposed change:** Cap follow speed (for example 5 m/s), add a short approach phase before enabling drive, and stop driving or auto-release past a set gap (for example 1.5 m). Consider a shorter grab reach.
+- **Proposed change:** Cap follow speed (for example 5 m/s), add a short approach phase before enabling drive, and stop driving or auto-release past a set gap (for example 1.5 m). **Maintainer decision (2026-11-25): the 5.5 m reach is intentional. Keep it.** This makes the capped approach phase important: the player should walk to the stretcher instead of being yanked, and must not pass through obstacles.
 
 ### 6. Held bags can be released inside or through obstacles
 - **Files:** `scripts/interaction/holdable_object.gd:11-41`, `scripts/interaction/pickup_interactor.gd:125-140`
@@ -126,10 +126,44 @@ var drive_speed := -desired_local.z * maximum_speed  # along local -Z
 - **Issue:** Entry keeps old movement input, so a held stick drives at once. Exit clears input while the finger is still down, so walking stops until the finger moves.
 - **Proposed change:** Either require the stick to return to center after a mode change, or keep reading its real position in both modes.
 
-### 11. Stretcher keeps momentum on release
-- **File:** `scripts/stretcher/stretcher_controller.gd:57-65, 189-193`
-- **Issue:** Release does not stop the body, and the physics function returns early with no operator. The invalid-operator path also leaves `can_sleep` false.
-- **Proposed change:** Decelerate after release until brakes exist. Use one cleanup function for both paths.
+### 11. Add push-and-coast behavior based on wheel locks
+- **Files:** `scripts/stretcher/stretcher_controller.gd:57-65, 189-193`, `scripts/interaction/pickup_interactor.gd`, `ui/mobile_controls.gd`
+- **Maintainer decision (2026-11-25):** The player character can push the stretcher so that it coasts, and the locked or unlocked wheels decide how it moves.
+- **Current state:** Release keeps momentum, but the physics function returns early with no operator, so wheel locks do nothing while coasting. The invalid-operator path also leaves `can_sleep` false.
+- **Proposed change:**
+  - Add a PUSH button, shown only while the stretcher is grabbed. It lets go and gives one capped impulse along the operator's facing (along the stretcher's long axis if any pair is locked). Suggested starting cap: 2.5 m/s.
+  - Plain RELEASE adds no impulse. Any existing momentum coasts under the same rules.
+  - Apply the wheel rules every physics tick, operator or not, after drive and before the early return:
+
+| Front | Rear | Coasting behavior |
+|---|---|---|
+| Free | Free | Rolls in any direction and may rotate; casters trail the motion |
+| Locked | Free | Front axle cannot slide sideways; the rear end can swing |
+| Free | Locked | Rear axle cannot slide sideways; the front end can swing |
+| Locked | Locked | Rolls straight along its long axis; no rotation |
+
+```gdscript
+# Casters are at z = -0.72 (front) and +0.72 (rear).
+# Locked means swivel lock, not a brake: forward rolling is kept.
+func _apply_wheel_constraints() -> void:
+	if are_both_casters_unlocked():
+		return
+	var local_velocity := global_basis.inverse() * linear_velocity
+	if front_casters_locked and rear_casters_locked:
+		angular_velocity.y = 0.0
+		local_velocity.x = 0.0
+	else:
+		var axle_z := -0.72 if front_casters_locked else 0.72
+		# No sideways motion at the locked axle: v.x + yaw_rate * axle_z = 0
+		local_velocity.x = -angular_velocity.y * axle_z
+	linear_velocity = global_basis * local_velocity
+```
+
+  - Assigning the sideways speed instantly is a starting point. Ease it in if it feels abrupt. The code assumes a flat floor; re-check it on ramps.
+  - With one pair locked, item 3's yaw formula can keep a pushed stretcher turning from its caster angle. Let that angle ease toward trailing as it coasts.
+  - Tune coasting distance with `linear_damp` (now 0.5) and spin with `angular_damp` (now 5.0).
+  - Restore player collision only once the two no longer overlap, so release does not shove the player.
+  - Allow sleeping again after release, using one cleanup function for both paths. Brakes stay a separate future feature.
 
 ### 12. No gravity or ground height while operating
 - **Files:** `scripts/player/player_controller.gd:113`, `scripts/stretcher/stretcher_controller.gd:92-95`
@@ -166,8 +200,8 @@ var drive_speed := -desired_local.z * maximum_speed  # along local -Z
 
 ## Suggested order
 
-1. Items 1, 2 and 11: stretcher contact, friction and stopping.
-2. Items 3 and 4: one steering model.
+1. Items 1 and 2: stretcher contact and friction.
+2. Items 3 and 4: one steering model. Then item 11: push and coast.
 3. Items 5 and 12: operator following.
 4. Items 7, 8, 10 and 13: touch input.
 5. Items 6, 9, 14 and 15.
@@ -176,7 +210,10 @@ var drive_speed := -desired_local.z * maximum_speed  # along local -Z
 ## iPad test checklist
 
 - [ ] Wheels rest on the floor, neither sinking nor floating.
-- [ ] Stretcher reaches its set speed and stops after release.
+- [ ] Stretcher reaches its set speed and coasts to a stop after release.
+- [ ] PUSH in all four lock combinations, from both ends, matches the coasting table.
+- [ ] Grab from near 5.5 m: the player walks over without being yanked or passing through obstacles.
+- [ ] Release or PUSH does not shove the player.
 - [ ] All four lock combinations, forward and reverse, from both ends and both sides.
 - [ ] Wheel direction matches the turn every time.
 - [ ] Locked stretcher never slides sideways.
@@ -189,7 +226,7 @@ var drive_speed := -desired_local.z * maximum_speed  # along local -Z
 
 ## Questions for the maintainer
 
-1. Answered: forklift style when the trailing casters steer (see item 3).
+1. Answered: depends on the wheel locks, with forklift style when the trailing casters steer (see item 3).
 2. Should side operators be able to steer with casters locked, or only reposition?
-3. Should the stretcher stop on release, or coast until brakes are added?
-4. Is the 5.5 m stretcher grab reach intentional?
+3. Answered: it coasts, and the player can push it (see item 11).
+4. Answered: yes, keep 5.5 m (see item 5).
