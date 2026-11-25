@@ -141,20 +141,13 @@ operator_facing_yaw_offset = atan2(-operator_forward_local.x, -operator_forward_
 - **Files:** `scripts/equipment/defibrillator.gd`, `scenes/equipment/defibrillator.tscn`, `scripts/interaction/pickup_interactor.gd:139`
 - The current crack logic matches the log (TOSS cracks it once; dropping does not). The decision below replaces it, so update the log too.
 - **Maintainer decision (2026-11-25): crack only on a hard impact.** It now cracks the moment TOSS is pressed, before any impact.
-- **Speed alone cannot separate a toss from a drop.** Holding level, estimated floor impact is about 4.0 m/s for a toss and 4.1 m/s for a drop. A threshold low enough to catch tosses may also catch chest-height drops.
-- **Proposed change:** Until the maintainer answers question 5, keep the logged rule that an ordinary drop does not crack it. Make TOSS only arm the damage, then crack on a hard hit. Set `contact_monitor = true` and `max_contacts_reported = 4` on the body, and treat this as a sketch to test:
+- **Maintainer decision (2026-11-25): hard drops can crack it too.** Any hard impact counts, however it was released. This replaces the log's rule that an ordinary drop never cracks it, so update the log.
+- **Estimated floor impacts (holding level):** toss 4.0 m/s, chest-height drop 4.1 m/s, 30 cm drop 2.2 m/s. A threshold of 3.0 m/s should crack the first two and spare the last.
+- **Proposed change:** Crack on a hard hit, with no link to TOSS. Set `contact_monitor = true` and `max_contacts_reported = 4` on the body, and treat this as a sketch to test:
 
 ```gdscript
 @export var crack_speed_change: float = 3.0  # tune on device
-var _armed: bool = false
 var _previous_velocity: Vector3 = Vector3.ZERO
-
-func on_tossed() -> void:
-	_armed = true  # no longer cracks here
-
-func pick_up(hold_transform: Transform3D) -> void:
-	_armed = false
-	super.pick_up(hold_transform)
 
 func release(hold_transform: Transform3D, inherited_velocity: Vector3) -> void:
 	super.release(hold_transform, inherited_velocity)
@@ -162,15 +155,14 @@ func release(hold_transform: Transform3D, inherited_velocity: Vector3) -> void:
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	# Contacts are from the last step, so compare this velocity with the previous one.
-	if _armed and not screen_cracked and state.get_contact_count() > 0:
+	if not screen_cracked and state.get_contact_count() > 0:
 		if (state.linear_velocity - _previous_velocity).length() >= crack_speed_change:
 			screen_cracked = true
 			$CrackedScreen.set_deferred("visible", true)
 	_previous_velocity = state.linear_velocity
 ```
 
-  The armed flag stays set until pickup, so a later hard hit can also crack it. Disarm it once the device is at rest if that is not wanted.
-- `has_method`/`call` can become an empty `on_tossed()` on `HoldableObject` that `Defibrillator` overrides.
+  Remove `on_tossed()` and its call in `pickup_interactor.gd` if nothing else uses them. Fix review 1 item 6 as well: releasing the device inside an obstacle could push it out fast enough to crack it by mistake.
 - The TOSS tooltip still says "bag".
 - "ZOLL" is a real company's brand, shown on a device that breaks, in a public repository. Consider a fictional or generic name unless there is permission. **Maintainer's choice.**
 
@@ -198,7 +190,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 - [ ] Hold the joystick and press every button with another finger.
 - [ ] Interrupt a held joystick with Xogot's interface. Does movement stop, and does the stick work again?
 - [ ] Grab, release, re-grab quickly; drag LOOK during each.
-- [ ] Defibrillator: low drop (no crack), toss onto the floor (crack on landing, not before), gentle landing (no crack), pick up again (still cracked).
+- [ ] Defibrillator: 30 cm drop (no crack), chest-height drop (crack on landing), toss onto the floor (crack on landing, not before), pick up again (still cracked). Restart between crack tests.
 
 ## Questions for the maintainer
 
@@ -206,4 +198,4 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 2. Answered: about 1 m (see N3).
 3. Answered: only on a hard impact (see N11).
 4. Keep the ZOLL name, or use a generic one?
-5. Can a hard drop from chest height also crack the defibrillator, or only a toss?
+5. Answered: hard drops can crack it too (see N11).
