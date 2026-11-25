@@ -51,4 +51,7 @@
 - Both caster pairs free: joystick direction drives omnidirectional movement and free casters swivel toward travel. One pair locked: the other pair steers in a car-like mode. Both pairs locked: the stretcher rolls straight in its current wheel direction; brakes remain separate and are not implemented here.
 - Added front/rear operating positions so the player can grab from either end or side while keeping a consistent third-person camera orientation.
 - Added cancellation, focus-loss, pause, and scene-exit cleanup to reset touch input and release a stuck movement joystick.
-- Runtime validation is pending: verify each steering mode, lock/unlock leg and lever animations, both-side interaction, bag reach/toss distance, and joystick recovery after interrupting touch input.
+- Added stale-touch recovery: a new touch can take over a joystick after Xogot UI swallows its release, and touch state resets on focus/resume and control resize.
+- Locking a caster pair now snaps its wheels straight immediately. While operating the stretcher, the left pad drives and the right LOOK pad orbits the camera around the character; dragging right moves the camera around to the left, and vice versa.
+- Stretcher drive direction and operator facing are captured at grab time. With the front pair locked, the rear free pair drives/steers; with the rear pair locked, the front free pair drives/steers. The support collider is lifted slightly so the caster wheels, rather than the broad underside, carry the stretcher across the floor.
+- Runtime validation is pending: verify steering and movement with each lock combination and operator end, lock/unlock animations, camera orbit, both-side interaction, bag reach/toss distance, and joystick recovery after interrupting touch input.

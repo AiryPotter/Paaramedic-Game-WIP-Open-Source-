@@ -29,6 +29,7 @@ func _ready() -> void:
 	_build_interaction_button()
 	_build_toss_button()
 	_build_lock_buttons()
+	resized.connect(_reset_touch_state)
 	queue_redraw()
 
 
@@ -50,7 +51,12 @@ func _process(_delta: float) -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+	if (
+		what == NOTIFICATION_WM_WINDOW_FOCUS_OUT
+		or what == NOTIFICATION_WM_WINDOW_FOCUS_IN
+		or what == NOTIFICATION_APPLICATION_PAUSED
+		or what == NOTIFICATION_APPLICATION_RESUMED
+	):
 		_reset_touch_state()
 
 
@@ -73,11 +79,16 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		return
 
 	if event.position.x < size.x * 0.5 and event.position.y > size.y * 0.45:
-		if joystick_touch_id == -1:
-			joystick_touch_id = event.index
-			_update_joystick(event.position)
-	elif event.position.x >= size.x * 0.5 and look_touch_id == -1:
+		# A new touch takes over if Xogot's editor UI swallowed the previous release.
+		joystick_touch_id = event.index
+		joystick_offset = Vector2.ZERO
+		_update_joystick(event.position)
+	elif event.position.x >= size.x * 0.5:
+		# Likewise, replace a stale look/movement touch after returning from editor UI.
 		look_touch_id = event.index
+		look_offset = Vector2.ZERO
+		player.set_look_movement_input(Vector2.ZERO)
+		queue_redraw()
 
 
 func _touch_hits_control(touch_position: Vector2) -> bool:

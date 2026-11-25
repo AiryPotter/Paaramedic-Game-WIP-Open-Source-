@@ -12,6 +12,9 @@ class_name StretcherController
 var operator: CharacterBody3D
 var operator_input: Vector2 = Vector2.ZERO
 var operator_offset: Vector3 = Vector3(0.0, 0.0, 1.45)
+var operator_forward_local: Vector3 = Vector3(0.0, 0.0, -1.0)
+var operator_right_local: Vector3 = Vector3(1.0, 0.0, 0.0)
+var operator_facing_yaw_offset: float = 0.0
 var front_casters_locked: bool = false
 var rear_casters_locked: bool = false
 
@@ -35,12 +38,19 @@ func grab(player: CharacterBody3D) -> bool:
 	operator = player
 	operator_input = Vector2.ZERO
 	operator_offset = _nearest_operator_offset(player.global_position)
+	operator_facing_yaw_offset = wrapf(player.rotation.y - rotation.y, -PI, PI)
+	operator_forward_local = global_basis.inverse() * (-player.global_basis.z)
+	operator_forward_local.y = 0.0
+	if operator_forward_local.length_squared() < 0.01:
+		operator_forward_local = Vector3(0.0, 0.0, -1.0)
+	operator_forward_local = operator_forward_local.normalized()
+	operator_right_local = operator_forward_local.cross(Vector3.UP).normalized()
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	can_sleep = false
 	sleeping = false
 	add_collision_exception_with(player)
-	player.call("enter_stretcher_mode", self)
+	player.call("enter_stretcher_mode", self, operator_facing_yaw_offset)
 	return true
 
 
@@ -109,6 +119,8 @@ func _set_front_casters_locked(locked: bool) -> void:
 	if front_casters_locked == locked:
 		return
 	front_casters_locked = locked
+	if locked:
+		_straighten_caster_pair(_front_casters)
 	_animate_caster_pair_width(_front_casters, locked, true)
 	_animate_lock_lever(NodePath("FrontLockLever/Lever"), locked, true)
 
@@ -117,8 +129,15 @@ func _set_rear_casters_locked(locked: bool) -> void:
 	if rear_casters_locked == locked:
 		return
 	rear_casters_locked = locked
+	if locked:
+		_straighten_caster_pair(_rear_casters)
 	_animate_caster_pair_width(_rear_casters, locked, false)
 	_animate_lock_lever(NodePath("RearLockLever/Lever"), locked, false)
+
+
+func _straighten_caster_pair(casters: Array[Node3D]) -> void:
+	for caster in casters:
+		caster.rotation.y = 0.0
 
 
 func _animate_caster_pair_width(casters: Array[Node3D], locked: bool, is_front: bool) -> void:
@@ -173,26 +192,42 @@ func _physics_process(delta: float) -> void:
 		operator_input = Vector2.ZERO
 		return
 
+	var longitudinal_input := -operator_input.y
+	var lateral_input := operator_input.x
+	var local_forward_motion := operator_forward_local * longitudinal_input
 	var target_horizontal_velocity := Vector3.ZERO
 	var target_turn_speed := 0.0
+
 	if are_both_casters_unlocked():
-		var free_direction := Vector3(operator_input.x, 0.0, operator_input.y)
+		var free_direction := local_forward_motion + operator_right_local * lateral_input
 		if free_direction.length_squared() > 0.01:
 			var world_direction := global_basis * free_direction.normalized()
 			target_horizontal_velocity = world_direction * maximum_speed
 		_steer_free_casters(_front_casters, free_direction, delta)
 		_steer_free_casters(_rear_casters, free_direction, delta)
 	else:
-		var forward := -global_basis.z
-		target_horizontal_velocity = forward * (-operator_input.y * maximum_speed)
+		# The operator's facing at grab time defines forward/reverse for the drive.
+		var world_forward := global_basis * operator_forward_local
+		target_horizontal_velocity = world_forward * (longitudinal_input * maximum_speed)
+
 		if front_casters_locked and not rear_casters_locked:
-			target_turn_speed = operator_input.x * maximum_turn_speed
-			_steer_free_casters(_rear_casters, Vector3(operator_input.x * 0.4, 0.0, operator_input.y), delta)
+			# Rear pair is the drive/steering pair when the front is locked.
+			var rear_steer_direction := local_forward_motion - operator_right_local * (lateral_input * 0.4)
+			_steer_free_casters(_rear_casters, rear_steer_direction, delta)
+			target_turn_speed = lateral_input * maximum_turn_speed * _body_drive_sign(longitudinal_input)
 		elif rear_casters_locked and not front_casters_locked:
-			target_turn_speed = -operator_input.x * maximum_turn_speed
-			_steer_free_casters(_front_casters, Vector3(operator_input.x * 0.4, 0.0, operator_input.y), delta)
-		# With both pairs locked, the stretcher rolls straight in its fixed wheel direction.
+			# Front pair is the drive/steering pair when the rear is locked.
+			var front_steer_direction := local_forward_motion + operator_right_local * (lateral_input * 0.4)
+			_steer_free_casters(_front_casters, front_steer_direction, delta)
+			target_turn_speed = -lateral_input * maximum_turn_speed * _body_drive_sign(longitudinal_input)
+		# With both pairs locked, it rolls straight along the operator's facing axis.
 
 	linear_velocity.x = move_toward(linear_velocity.x, target_horizontal_velocity.x, drive_acceleration * delta)
 	linear_velocity.z = move_toward(linear_velocity.z, target_horizontal_velocity.z, drive_acceleration * delta)
 	angular_velocity.y = move_toward(angular_velocity.y, target_turn_speed, turn_acceleration * delta)
+
+
+func _body_drive_sign(longitudinal_input: float) -> float:
+	if is_zero_approx(longitudinal_input) or absf(operator_forward_local.z) < 0.1:
+		return 0.0
+	return signf(-operator_forward_local.z) * signf(longitudinal_input)

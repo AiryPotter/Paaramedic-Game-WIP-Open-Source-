@@ -40,9 +40,8 @@ func is_stretcher_grabbed() -> bool:
 
 
 func look_control_moves() -> bool:
-	return is_instance_valid(grabbed_stretcher) and bool(
-		grabbed_stretcher.call("are_both_casters_unlocked")
-	)
+	# Keep the right-side pad available for camera orbit while operating the stretcher.
+	return false
 
 
 func get_front_lock_label() -> String:
