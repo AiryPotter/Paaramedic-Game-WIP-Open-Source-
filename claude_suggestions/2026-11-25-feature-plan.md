@@ -149,7 +149,7 @@ if turn_factor > 0.001:
 - Forklift and side-steering directions do not change.
 
 ### Both pairs unlocked
-Now `target_turn_speed` is always 0, so the stretcher **cannot be turned at all** with everything free. Suggested: pushing sideways from an end swings that end, as on real casters.
+Now `target_turn_speed` is always 0, so the stretcher **cannot be turned at all** with everything free. **Maintainer decision (2026-11-25): swing and slide.** Pushing sideways from an end swings that end while the whole stretcher also drifts that way.
 
 ```gdscript
 # Both free, end operator only. Positive yaw is left.
@@ -161,7 +161,7 @@ if absf(operator_offset.z) > absf(operator_offset.x):
 
 - Compute this before `target_horizontal_velocity`.
 - Stick-right from the rear end swings the rear end right, consistent with the forklift choice. From a side, the stretcher still slides without turning.
-- The tradeoff is that a pure sideways slide is then only available from the sides. **Maintainer question 3.**
+- The tradeoff is that a pure sideways slide is then only available from the sides. The 0.5 slide amount is a starting value to tune.
 - While coasting with both free, spin already continues and fades through `angular_damp`.
 
 ## Suggested order
@@ -183,10 +183,10 @@ if absf(operator_offset.z) > absf(operator_offset.x):
 - [ ] Pick up a stuck item, then drop it on the floor. It collides normally.
 - [ ] The wheels still touch the floor, and the pad looks the right length.
 - [ ] Turn at full lock with each pair locked, forward and reverse, from both ends and sides.
-- [ ] Both free: swing from each end, and slide from each side.
+- [ ] Both free: a sideways push from each end swings that end and drifts the same way. From each side, it slides without turning.
 
 ## Questions for the maintainer
 
 1. Answered: yes, landing on the pad never cracks it (see section 2).
 2. Is 2.20 m long enough?
-3. With both pairs free, should pushing sideways from an end swing the stretcher, slide it, or both (suggested)?
+3. Answered: swing and slide (see section 4).
