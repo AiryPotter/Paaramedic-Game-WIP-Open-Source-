@@ -65,16 +65,20 @@ func unstick_from_surface() -> void:
 		sleeping = false
 
 
-func _follow_stuck_surface() -> void:
-	if is_instance_valid(stuck_to):
-		global_transform = stuck_to.global_transform * _stuck_local_transform
-	else:
+func _follow_stuck_surface(delta: float = 0.0) -> void:
+	if not is_instance_valid(stuck_to):
 		unstick_from_surface()
+		return
+
+	var predicted_surface := stuck_to.global_transform
+	predicted_surface.origin += stuck_to.linear_velocity * delta
+	predicted_surface.basis = Basis(Vector3.UP, stuck_to.angular_velocity.y * delta) * predicted_surface.basis
+	global_transform = predicted_surface * _stuck_local_transform
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if is_stuck:
-		_follow_stuck_surface()
+		_follow_stuck_surface(delta)
 
 
 func release(hold_transform: Transform3D, inherited_velocity: Vector3) -> void:

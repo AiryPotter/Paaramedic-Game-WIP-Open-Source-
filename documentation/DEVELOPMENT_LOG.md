@@ -51,7 +51,7 @@
 - Both caster pairs free: the stretcher moves omnidirectionally. With one pair swivel-locked, it steers car-style from the other pair; with both locked it rolls straight. A swivel lock fixes caster direction only and is not a wheel brake.
 - Added front/rear operating positions so the player can grab from either end or side while keeping a consistent third-person camera orientation.
 - Added cancellation, focus-loss, pause, and scene-exit cleanup to reset touch input and release a stuck movement joystick.
-- Touch recovery now clears stale IDs on focus/resume, viewport resize, and stretcher-mode changes. A second finger no longer steals an active joystick.
+- Touch recovery clears stale IDs on focus/resume, viewport resize, and stretcher-mode changes. If a new touch reuses an active finger index, it first releases the stale joystick/look state; a second finger still cannot steal an active joystick.
 - Locking a caster pair now snaps its wheels straight immediately. While operating the stretcher, the left pad drives and the right LOOK pad orbits the camera around the character; dragging right moves the camera around to the left, and vice versa.
 - Drive direction and operator facing are captured at grab time. With the front pair locked, the rear pair leads steering; with the rear pair locked, the front pair leads steering. Side operators can drive along the stretcher and steer the free end.
 - Moved wheel collision shapes directly under the rigid body, set low rolling friction, and constrained lateral slip at swivel-locked axles while preserving forward roll. Bumping an unoccupied stretcher now imparts a speed-scaled impulse; grabbing stops its drift. Analog input has a dead zone and retains variable speed.
@@ -66,7 +66,7 @@
 ## Milestone 8 — Longer stretcher and sticky equipment pad
 
 - Extended the stretcher deck to 2.20 m and updated the rails, crossbars, casters, wheel colliders, wheelbase, and operator end positions. The stretcher now spawns at floor height.
-- Expanded the pad sensor to the full deck; any holdable that touches it sticks immediately, with no footprint or overhang restriction. Objects flatten, preserve their yaw and landing position, and follow the moving stretcher.
+- Expanded the pad sensor to the full deck; any holdable that touches it sticks immediately, with no footprint or overhang restriction. Objects flatten, preserve their yaw and landing position, and predict the stretcher's next physics pose to avoid one-tick trailing while moving.
 - Picking up a secured object restores its collision mask and normal rigid-body behavior. Side/leg impacts do not trigger sticking.
 - Increased caster swivel response, steering angle, turn acceleration, and turn-speed cap for quicker steering; broader turning-radius tuning remains deferred.
 - KOLE cracks on hard impacts except for contacts with the padded stretcher top.

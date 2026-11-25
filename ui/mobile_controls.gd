@@ -80,6 +80,8 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 	if event.canceled or not event.pressed:
 		_release_touch(event.index)
 		return
+	if event.index == joystick_touch_id or event.index == look_touch_id:
+		_release_touch(event.index)
 	if _touch_hits_control(event.position):
 		return
 
