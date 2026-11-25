@@ -102,7 +102,7 @@ func _is_touching_pad(state: PhysicsDirectBodyState3D) -> bool:
 
 ## 3. Longer stretcher
 
-The pad is 1.85 m now. **Suggested length: 2.20 m** (**maintainer question 2**). Width stays at 1.0 m.
+The pad is 1.85 m now. **Maintainer decision (2026-11-25): 2.20 m.** Width stays at 1.0 m.
 
 | Part | Now | Suggested |
 |---|---|---|
@@ -185,8 +185,8 @@ if absf(operator_offset.z) > absf(operator_offset.x):
 - [ ] Turn at full lock with each pair locked, forward and reverse, from both ends and sides.
 - [ ] Both free: a sideways push from each end swings that end and drifts the same way. From each side, it slides without turning.
 
-## Questions for the maintainer
+## Questions for the maintainer (all answered)
 
 1. Answered: yes, landing on the pad never cracks it (see section 2).
-2. Is 2.20 m long enough?
+2. Answered: yes, 2.20 m (see section 3).
 3. Answered: swing and slide (see section 4).
