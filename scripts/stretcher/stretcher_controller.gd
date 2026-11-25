@@ -5,10 +5,10 @@ class_name StretcherController
 
 @export var maximum_speed: float = 2.2
 @export var drive_acceleration: float = 8.0
-@export var maximum_turn_speed: float = 0.8
-@export var turn_acceleration: float = 3.5
-@export var caster_swivel_speed: float = 8.0
-@export var maximum_steer_angle: float = 0.4
+@export var maximum_turn_speed: float = 1.2
+@export var turn_acceleration: float = 6.0
+@export var caster_swivel_speed: float = 14.0
+@export var maximum_steer_angle: float = 0.6
 @export var minimum_bump_speed: float = 0.8
 @export var bump_impulse_scale: float = 0.12
 @export var maximum_bump_impulse: float = 16.0
@@ -16,8 +16,6 @@ class_name StretcherController
 
 const WHEELBASE: float = 1.6
 const PAD_TOP_LOCAL_Y: float = 0.82
-const PAD_HALF_WIDTH: float = 0.5
-const PAD_HALF_LENGTH: float = 1.1
 
 @onready var _pad_area: Area3D = $PadArea
 
@@ -260,25 +258,12 @@ func _stick_holdables_to_pad() -> void:
 		if not overlapping_body is HoldableObject:
 			continue
 		var item := overlapping_body as HoldableObject
-		if item.is_held or item.is_stuck or item.linear_velocity.y > 0.5:
+		if item.is_held or item.is_stuck:
 			continue
 
 		var local_center := to_local(item.global_position)
 		var local_yaw := wrapf(item.global_rotation.y - global_rotation.y, -PI, PI)
-		var half_width := item.pad_footprint.x * 0.5
-		var half_length := item.pad_footprint.y * 0.5
-		var cosine := absf(cos(local_yaw))
-		var sine := absf(sin(local_yaw))
-		var extent_x := cosine * half_width + sine * half_length
-		var extent_z := sine * half_width + cosine * half_length
-		if absf(local_center.x) + extent_x > PAD_HALF_WIDTH:
-			continue
-		if absf(local_center.z) + extent_z > PAD_HALF_LENGTH:
-			continue
-
 		var resting_center_y := PAD_TOP_LOCAL_Y + item.pad_resting_height * 0.5
-		if absf(local_center.y - resting_center_y) > 0.12:
-			continue
 
 		var local_transform := Transform3D(
 			Basis(Vector3.UP, local_yaw),

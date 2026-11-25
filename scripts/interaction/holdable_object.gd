@@ -4,7 +4,6 @@ class_name HoldableObject
 ## A reusable physical object that can be held, released, or secured to the stretcher pad.
 
 @export var pad_resting_height: float = 0.3
-@export var pad_footprint: Vector2 = Vector2(0.6, 0.4)
 
 var is_held: bool = false
 var is_stuck: bool = false

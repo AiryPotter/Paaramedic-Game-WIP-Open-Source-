@@ -66,7 +66,8 @@
 ## Milestone 8 — Longer stretcher and sticky equipment pad
 
 - Extended the stretcher deck to 2.20 m and updated the rails, crossbars, casters, wheel colliders, wheelbase, and operator end positions. The stretcher now spawns at floor height.
-- Added a thin pad area that secures holdable objects only when their footprint and resting height fit on the deck; objects flatten, preserve their yaw and landing position, and follow the moving stretcher.
+- Expanded the pad sensor to the full deck; any holdable that touches it sticks immediately, with no footprint or overhang restriction. Objects flatten, preserve their yaw and landing position, and follow the moving stretcher.
 - Picking up a secured object restores its collision mask and normal rigid-body behavior. Side/leg impacts do not trigger sticking.
+- Increased caster swivel response, steering angle, turn acceleration, and turn-speed cap for quicker steering; broader turning-radius tuning remains deferred.
 - KOLE cracks on hard impacts except for contacts with the padded stretcher top.
-- Runtime validation is pending: test all equipment landing positions and orientations, pickup after sticking, hard/soft KOLE impacts, deck travel, and wheel contact.
+- Runtime validation is pending: test immediate sticking across the full pad, overhanging items, pickup after sticking, hard/soft KOLE impacts, quicker steering in both directions with the rear pair locked, deck travel, and wheel contact.
