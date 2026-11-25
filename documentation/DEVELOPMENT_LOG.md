@@ -57,8 +57,8 @@
 - Moved wheel collision shapes directly under the rigid body, set low rolling friction, and constrained lateral slip at swivel-locked axles while preserving forward roll. Bumping an unoccupied stretcher now imparts a speed-scaled impulse; grabbing stops its drift. Analog input has a dead zone and retains variable speed.
 - Runtime validation is pending: verify wheel contact, bump/coast/grab behavior, each lock combination from both ends and sides, steering visuals, camera orbit, multitouch buttons, and touch recovery after Xogot interrupts input.
 
-## Milestone 7 — ZOLL defibrillator equipment
+## Milestone 7 — KOLE defibrillator equipment
 
-- Added a low-poly, pickupable ZOLL-style defibrillator to the training scene.
+- Added a low-poly, pickupable KOLE-brand defibrillator to the training scene.
 - Tossing it reveals a persistent cracked-screen overlay. Ordinary drop/release does not crack it, and the damage is visual only.
 - Runtime validation is pending: confirm pickup, normal drop without damage, and screen crack after toss.

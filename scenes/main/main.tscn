@@ -121,7 +121,7 @@ position = Vector3(-1.0, 0.23, 2.7)
 [node name="SecondaryBag" parent="." instance=ExtResource("5_secondary_bag")]
 position = Vector3(1.0, 0.19, 2.7)
 
-[node name="Defibrillator" parent="." instance=ExtResource("7_defibrillator")]
+[node name="KOLEDefibrillator" parent="." instance=ExtResource("7_defibrillator")]
 position = Vector3(0, 0.16, 2.7)
 
 [node name="Stretcher" parent="." instance=ExtResource("6_stretcher")]
