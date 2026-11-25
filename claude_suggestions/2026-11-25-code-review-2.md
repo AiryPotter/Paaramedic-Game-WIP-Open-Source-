@@ -75,11 +75,12 @@
 - **Maintainer decision (2026-11-25): keep bumping and add a PUSH button.** Bumping is there; the PUSH button from review 1 item 11 is not.
 - **Proposed change:**
   - Show PUSH only while the stretcher is grabbed. Add it to `_touch_hits_control`, and keep it clear of the existing buttons.
-  - Queue the request like TOSS, for the physics tick. Release the stretcher, then apply one impulse along the operator's facing: `mass * push_speed`, capped so total speed stays within the limit (2.5 m/s suggested).
+  - Queue the request like TOSS, for the physics tick. Release the stretcher, then apply one impulse along the operator's facing: `mass * push_speed`, capped so total speed stays within `maximum_speed` (2.2 m/s).
   - With any pair locked, project the direction onto the stretcher's long axis. If the operator faces straight across it, a push has no effect, so disable PUSH there or show why.
   - Clear any queued INTERACT after a PUSH, so it cannot re-grab.
   - Use relative speed for bumps, and tune both after N1 and N2.
-  - Coasting distance is still to be decided.
+  - **Maintainer decision (2026-11-25): a full-speed push should coast about 1 m.** Keep `linear_damp` at 1.2 and cap the push at 2.2 m/s, which is estimated at about 1.1 m. (The 2.5 m/s cap in review 1 is replaced; it would be about 1.3 m.) Adjust after iPad testing.
+  - With this cap, PUSH gives a full shove from a standstill but adds nothing when already at full speed; it then acts like RELEASE.
 - **Estimates:** Coasting from 2.2 m/s is 1.1 m at damping 1.2 and 1.9 m at 0.5.
 
 ### N6. A missed touch release can leave the joystick stuck
@@ -162,7 +163,7 @@ operator_facing_yaw_offset = atan2(-operator_forward_local.x, -operator_forward_
 - [ ] Bump it with both free, front locked, rear locked, and both locked. Note which ones move.
 - [ ] Bump the free end sideways with one pair locked. Does it swing?
 - [ ] After PUSH is added: push in all four lock states, from both ends and both sides.
-- [ ] Release at full speed in all four lock states. Does the distance feel right?
+- [ ] Release at full speed in all four lock states. Is the distance about 1 m?
 - [ ] Steer from both ends and both sides with each pair locked.
 - [ ] Grab at an angle, then push straight forward.
 - [ ] Hold the joystick and press every button with another finger.
@@ -173,6 +174,6 @@ operator_facing_yaw_offset = atan2(-operator_forward_local.x, -operator_forward_
 ## Questions for the maintainer
 
 1. Answered: bumping plus a PUSH button (see N3).
-2. How far should a full-speed push coast: about 1 m, 2 m, or further?
+2. Answered: about 1 m (see N3).
 3. Should the defibrillator crack when tossed, or only on a hard impact?
 4. Keep the ZOLL name, or use a generic one?
