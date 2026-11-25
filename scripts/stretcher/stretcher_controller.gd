@@ -14,11 +14,16 @@ class_name StretcherController
 @export var maximum_bump_impulse: float = 16.0
 @export var bump_cooldown: float = 0.3
 
-const WHEELBASE: float = 1.44
+const WHEELBASE: float = 1.6
+const PAD_TOP_LOCAL_Y: float = 0.82
+const PAD_HALF_WIDTH: float = 0.5
+const PAD_HALF_LENGTH: float = 1.1
+
+@onready var _pad_area: Area3D = $PadArea
 
 var operator: CharacterBody3D
 var operator_input: Vector2 = Vector2.ZERO
-var operator_offset: Vector3 = Vector3(0.0, 0.0, 1.45)
+var operator_offset: Vector3 = Vector3(0.0, 0.0, 1.625)
 var operator_forward_local: Vector3 = Vector3(0.0, 0.0, -1.0)
 var operator_right_local: Vector3 = Vector3(1.0, 0.0, 0.0)
 var operator_facing_yaw_offset: float = 0.0
@@ -88,8 +93,8 @@ func release(player: CharacterBody3D) -> void:
 func _nearest_operator_offset(player_position: Vector3) -> Vector3:
 	var local_player_position := to_local(player_position)
 	var approach_points: Array[Vector3] = [
-		Vector3(0.0, 0.0, 1.45),
-		Vector3(0.0, 0.0, -1.45),
+		Vector3(0.0, 0.0, 1.625),
+		Vector3(0.0, 0.0, -1.625),
 		Vector3(1.0, 0.0, 0.0),
 		Vector3(-1.0, 0.0, 0.0)
 	]
@@ -250,9 +255,42 @@ func apply_character_bump(player_velocity: Vector3, surface_normal: Vector3) -> 
 	_bump_cooldown_remaining = bump_cooldown
 
 
+func _stick_holdables_to_pad() -> void:
+	for overlapping_body in _pad_area.get_overlapping_bodies():
+		if not overlapping_body is HoldableObject:
+			continue
+		var item := overlapping_body as HoldableObject
+		if item.is_held or item.is_stuck or item.linear_velocity.y > 0.5:
+			continue
+
+		var local_center := to_local(item.global_position)
+		var local_yaw := wrapf(item.global_rotation.y - global_rotation.y, -PI, PI)
+		var half_width := item.pad_footprint.x * 0.5
+		var half_length := item.pad_footprint.y * 0.5
+		var cosine := absf(cos(local_yaw))
+		var sine := absf(sin(local_yaw))
+		var extent_x := cosine * half_width + sine * half_length
+		var extent_z := sine * half_width + cosine * half_length
+		if absf(local_center.x) + extent_x > PAD_HALF_WIDTH:
+			continue
+		if absf(local_center.z) + extent_z > PAD_HALF_LENGTH:
+			continue
+
+		var resting_center_y := PAD_TOP_LOCAL_Y + item.pad_resting_height * 0.5
+		if absf(local_center.y - resting_center_y) > 0.12:
+			continue
+
+		var local_transform := Transform3D(
+			Basis(Vector3.UP, local_yaw),
+			Vector3(local_center.x, resting_center_y, local_center.z)
+		)
+		item.stick_to_surface(self, local_transform)
+
+
 func _physics_process(delta: float) -> void:
 	_bump_cooldown_remaining = maxf(_bump_cooldown_remaining - delta, 0.0)
 	_sync_wheel_colliders()
+	_stick_holdables_to_pad()
 	if not is_instance_valid(operator):
 		operator = null
 		operator_input = Vector2.ZERO
@@ -316,6 +354,6 @@ func _apply_wheel_constraints() -> void:
 		angular_velocity.y = 0.0
 		local_velocity.x = 0.0
 	else:
-		var locked_axle_z := -0.72 if front_casters_locked else 0.72
+		var locked_axle_z := -WHEELBASE * 0.5 if front_casters_locked else WHEELBASE * 0.5
 		local_velocity.x = -angular_velocity.y * locked_axle_z
 	linear_velocity = global_basis * local_velocity

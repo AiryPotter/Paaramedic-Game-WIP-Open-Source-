@@ -60,5 +60,13 @@
 ## Milestone 7 — KOLE defibrillator equipment
 
 - Added a low-poly, pickupable KOLE-brand defibrillator to the training scene.
-- Tossing it reveals a persistent cracked-screen overlay. Ordinary drop/release does not crack it, and the damage is visual only.
-- Runtime validation is pending: confirm pickup, normal drop without damage, and screen crack after toss.
+- A hard impact reveals a persistent cosmetic cracked-screen overlay. Tossing alone does not crack it; landing on the stretcher pad is cushioned.
+- Runtime validation is pending: check soft and hard floor drops, toss impacts, and padded-deck landings.
+
+## Milestone 8 — Longer stretcher and sticky equipment pad
+
+- Extended the stretcher deck to 2.20 m and updated the rails, crossbars, casters, wheel colliders, wheelbase, and operator end positions. The stretcher now spawns at floor height.
+- Added a thin pad area that secures holdable objects only when their footprint and resting height fit on the deck; objects flatten, preserve their yaw and landing position, and follow the moving stretcher.
+- Picking up a secured object restores its collision mask and normal rigid-body behavior. Side/leg impacts do not trigger sticking.
+- KOLE cracks on hard impacts except for contacts with the padded stretcher top.
+- Runtime validation is pending: test all equipment landing positions and orientations, pickup after sticking, hard/soft KOLE impacts, deck travel, and wheel contact.

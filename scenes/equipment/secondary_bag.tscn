@@ -24,6 +24,8 @@ roughness = 1.0
 
 [node name="SecondaryBag" type="RigidBody3D" groups=["pickupable"]]
 mass = 1.8
+pad_resting_height = 0.38
+pad_footprint = Vector2(0.62, 0.42)
 script = ExtResource("1_holdable")
 
 [node name="BagBody" type="MeshInstance3D" parent="."]

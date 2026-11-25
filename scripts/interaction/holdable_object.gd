@@ -1,17 +1,25 @@
 extends RigidBody3D
 class_name HoldableObject
 
-## A reusable physical object that can be held and released by the player.
+## A reusable physical object that can be held, released, or secured to the stretcher pad.
+
+@export var pad_resting_height: float = 0.3
+@export var pad_footprint: Vector2 = Vector2(0.6, 0.4)
 
 var is_held: bool = false
+var is_stuck: bool = false
+var stuck_to: RigidBody3D
 var _saved_collision_layer: int
 var _saved_collision_mask: int
+var _stuck_collision_mask: int
+var _stuck_local_transform: Transform3D
 
 
 func pick_up(hold_transform: Transform3D) -> void:
 	if is_held:
 		return
 
+	unstick_from_surface()
 	_saved_collision_layer = collision_layer
 	_saved_collision_mask = collision_mask
 	is_held = true
@@ -25,6 +33,49 @@ func pick_up(hold_transform: Transform3D) -> void:
 func follow_hold_point(hold_transform: Transform3D) -> void:
 	if is_held:
 		global_transform = hold_transform
+
+
+func stick_to_surface(surface: RigidBody3D, local_transform: Transform3D) -> void:
+	if is_held or is_stuck:
+		return
+	is_stuck = true
+	stuck_to = surface
+	_stuck_local_transform = local_transform
+	_stuck_collision_mask = collision_mask
+	collision_mask = 0
+	add_collision_exception_with(surface)
+	surface.add_collision_exception_with(self)
+	freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	_follow_stuck_surface()
+
+
+func unstick_from_surface() -> void:
+	if not is_stuck:
+		return
+	if is_instance_valid(stuck_to):
+		remove_collision_exception_with(stuck_to)
+		stuck_to.remove_collision_exception_with(self)
+	stuck_to = null
+	is_stuck = false
+	collision_mask = _stuck_collision_mask
+	if not is_held:
+		freeze = false
+		sleeping = false
+
+
+func _follow_stuck_surface() -> void:
+	if is_instance_valid(stuck_to):
+		global_transform = stuck_to.global_transform * _stuck_local_transform
+	else:
+		unstick_from_surface()
+
+
+func _physics_process(_delta: float) -> void:
+	if is_stuck:
+		_follow_stuck_surface()
 
 
 func release(hold_transform: Transform3D, inherited_velocity: Vector3) -> void:

@@ -1,9 +1,9 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/stretcher/stretcher_controller.gd" id="1_stretcher_controller"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_deck"]
-size = Vector3(1.0, 0.18, 1.85)
+size = Vector3(1.0, 0.18, 2.2)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor_support"]
 size = Vector3(0.86, 0.24, 1.5)
@@ -17,11 +17,14 @@ friction = 0.05
 rough = false
 bounce = 0.0
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_pad_area"]
+size = Vector3(0.9, 0.12, 2.08)
+
 [sub_resource type="BoxMesh" id="BoxMesh_deck"]
-size = Vector3(1.0, 0.18, 1.85)
+size = Vector3(1.0, 0.18, 2.2)
 
 [sub_resource type="BoxMesh" id="BoxMesh_rail"]
-size = Vector3(0.07, 0.42, 1.7)
+size = Vector3(0.07, 0.42, 2.05)
 
 [sub_resource type="BoxMesh" id="BoxMesh_crossbar"]
 size = Vector3(0.96, 0.08, 0.08)
@@ -67,27 +70,35 @@ material_override = SubResource("Material_deck")
 position = Vector3(0, 0.73, 0)
 shape = SubResource("BoxShape3D_deck")
 
+[node name="PadArea" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="PadArea"]
+position = Vector3(0, 0.88, 0)
+shape = SubResource("BoxShape3D_pad_area")
+
 [node name="CollisionFloorSupport" type="CollisionShape3D" parent="."]
 position = Vector3(0, 0.24, 0)
 shape = SubResource("BoxShape3D_floor_support")
 
 [node name="WheelCollisionFrontLeft" type="CollisionShape3D" parent="."]
-position = Vector3(-0.48, 0.18, -0.72)
+position = Vector3(-0.48, 0.18, -0.8)
 rotation = Vector3(0, 0, 1.5708)
 shape = SubResource("CylinderShape3D_wheel")
 
 [node name="WheelCollisionFrontRight" type="CollisionShape3D" parent="."]
-position = Vector3(0.48, 0.18, -0.72)
+position = Vector3(0.48, 0.18, -0.8)
 rotation = Vector3(0, 0, 1.5708)
 shape = SubResource("CylinderShape3D_wheel")
 
 [node name="WheelCollisionRearLeft" type="CollisionShape3D" parent="."]
-position = Vector3(-0.48, 0.18, 0.72)
+position = Vector3(-0.48, 0.18, 0.8)
 rotation = Vector3(0, 0, 1.5708)
 shape = SubResource("CylinderShape3D_wheel")
 
 [node name="WheelCollisionRearRight" type="CollisionShape3D" parent="."]
-position = Vector3(0.48, 0.18, 0.72)
+position = Vector3(0.48, 0.18, 0.8)
 rotation = Vector3(0, 0, 1.5708)
 shape = SubResource("CylinderShape3D_wheel")
 
@@ -102,17 +113,17 @@ mesh = SubResource("BoxMesh_rail")
 material_override = SubResource("Material_frame")
 
 [node name="CrossbarFront" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.36, -0.79)
+position = Vector3(0, 0.36, -0.965)
 mesh = SubResource("BoxMesh_crossbar")
 material_override = SubResource("Material_frame")
 
 [node name="CrossbarBack" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.36, 0.79)
+position = Vector3(0, 0.36, 0.965)
 mesh = SubResource("BoxMesh_crossbar")
 material_override = SubResource("Material_frame")
 
 [node name="FrontLockLever" type="Node3D" parent="."]
-position = Vector3(0, 0.45, -0.94)
+position = Vector3(0, 0.45, -1.115)
 
 [node name="Lever" type="MeshInstance3D" parent="FrontLockLever"]
 position = Vector3(0, 0.12, 0)
@@ -121,7 +132,7 @@ mesh = SubResource("BoxMesh_lock_lever")
 material_override = SubResource("Material_frame")
 
 [node name="RearLockLever" type="Node3D" parent="."]
-position = Vector3(0, 0.45, 0.94)
+position = Vector3(0, 0.45, 1.115)
 
 [node name="Lever" type="MeshInstance3D" parent="RearLockLever"]
 position = Vector3(0, 0.12, 0)
@@ -130,7 +141,7 @@ mesh = SubResource("BoxMesh_lock_lever")
 material_override = SubResource("Material_frame")
 
 [node name="CasterFrontLeft" type="Node3D" parent="."]
-position = Vector3(-0.48, 0.18, -0.72)
+position = Vector3(-0.48, 0.18, -0.8)
 
 [node name="Leg" type="MeshInstance3D" parent="CasterFrontLeft"]
 position = Vector3(0.2, 0.04, 0)
@@ -143,7 +154,7 @@ mesh = SubResource("CylinderMesh_wheel")
 material_override = SubResource("Material_wheels")
 
 [node name="CasterFrontRight" type="Node3D" parent="."]
-position = Vector3(0.48, 0.18, -0.72)
+position = Vector3(0.48, 0.18, -0.8)
 
 [node name="Leg" type="MeshInstance3D" parent="CasterFrontRight"]
 position = Vector3(-0.2, 0.04, 0)
@@ -156,7 +167,7 @@ mesh = SubResource("CylinderMesh_wheel")
 material_override = SubResource("Material_wheels")
 
 [node name="CasterRearLeft" type="Node3D" parent="."]
-position = Vector3(-0.48, 0.18, 0.72)
+position = Vector3(-0.48, 0.18, 0.8)
 
 [node name="Leg" type="MeshInstance3D" parent="CasterRearLeft"]
 position = Vector3(0.2, 0.04, 0)
@@ -169,7 +180,7 @@ mesh = SubResource("CylinderMesh_wheel")
 material_override = SubResource("Material_wheels")
 
 [node name="CasterRearRight" type="Node3D" parent="."]
-position = Vector3(0.48, 0.18, 0.72)
+position = Vector3(0.48, 0.18, 0.8)
 
 [node name="Leg" type="MeshInstance3D" parent="CasterRearRight"]
 position = Vector3(-0.2, 0.04, 0)
