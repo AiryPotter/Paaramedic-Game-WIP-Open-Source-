@@ -87,7 +87,20 @@ var desired_local := operator_forward_local * longitudinal_input + operator_righ
 var drive_speed := -desired_local.z * maximum_speed  # along local -Z
 ```
 
-  End operators use lateral input to steer. For side operators, left/right then drives along the stretcher, so choose a separate steering rule or disable side steering.
+  End operators use lateral input to steer (item 3).
+- **Maintainer decision (2026-11-25): players can steer from the side with one caster pair locked.**
+- **Proposed side rule:** Stick left/right drives along the stretcher. Stick up (away from the player) or down (toward the player) swings the free end that way while the stretcher is rolling. With both pairs locked it still rolls straight; with both free it still moves in any direction.
+
+```gdscript
+# Side operators, exactly one pair locked. desired_local and drive_speed as above.
+# Near zero speed, keep the previous steer value.
+if absf(drive_speed) > 0.05:
+	steer = -desired_local.x * signf(drive_speed) * max_steer_angle
+# Then use the same yaw formulas as item 3.
+```
+
+  Unlike end steering, this includes the sign of `drive_speed`, so "away" always means away when rolling either direction. Ease `steer` so reversing does not snap the casters.
+- Replace `_body_drive_sign` with this rule and item 3, so steering no longer disappears at the sides. Apply it to both long sides.
 
 ### 5. Operator follow has no speed or distance limit
 - **File:** `scripts/player/player_controller.gd:109-116`
@@ -217,6 +230,7 @@ func _apply_wheel_constraints() -> void:
 - [ ] All four lock combinations, forward and reverse, from both ends and both sides.
 - [ ] Wheel direction matches the turn every time.
 - [ ] Locked stretcher never slides sideways.
+- [ ] From each long side with one pair locked: stick away swings the free end away, rolling either direction.
 - [ ] If an obstacle blocks the operator, the stretcher does not leave without them.
 - [ ] Grab, release, and re-grab quickly; drag LOOK during each transition.
 - [ ] Hold the joystick while pressing every button.
@@ -227,6 +241,6 @@ func _apply_wheel_constraints() -> void:
 ## Questions for the maintainer
 
 1. Answered: depends on the wheel locks, with forklift style when the trailing casters steer (see item 3).
-2. Should side operators be able to steer with casters locked, or only reposition?
+2. Answered: yes, they can steer from the side with one pair locked (see item 4).
 3. Answered: it coasts, and the player can push it (see item 11).
 4. Answered: yes, keep 5.5 m (see item 5).
