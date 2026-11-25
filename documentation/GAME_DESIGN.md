@@ -2,56 +2,80 @@
 
 ## Vision
 
-A touch-first, first-person training game about making calm, safe decisions during a fictional emergency response. The player should feel responsible for the whole encounter: approach, communicate, assess, choose equipment, move the patient, and reflect on the result. The tone is grounded and supportive rather than graphic or punitive.
+A touch-first, single-player paramedic training demo for iPad. The player completes one fictional response from dispatch through hospital handover, learning to communicate, assess, coordinate help, handle equipment, and move a patient safely. The tone is calm and supportive; mistakes should produce clear feedback rather than an arbitrary fail state.
 
-## Core play loop
+## Target demo
 
-1. **Dispatch:** Receive a short, fictional call brief and identify the immediate objective.
-2. **Approach:** Navigate a small scene and notice hazards before committing to an action.
-3. **Assess:** Interact with the patient, listen to their concern, and gather observations and simulated vitals.
-4. **Prepare:** Select and use appropriate equipment; keep equipment secured and in good condition.
-5. **Move:** Coordinate patient transfer and stretcher handling through a compact obstacle course.
-6. **Transport:** Reach the extraction point while maintaining control of the stretcher and equipment.
-7. **Debrief:** Review communication, assessment completeness, safe handling, time, and the patient's simulated trend.
+A complete, replayable call should include:
+
+1. **Dispatch and arrival:** a short brief, a clear objective, and an explorable scene.
+2. **Scene safety:** recognize hazards and decide whether it is safe to approach.
+3. **Patient encounter:** communicate and gather findings through explicit interactions.
+4. **Care and backup:** use only scenario steps that come from the maintainer's protocols and have been checked by a qualified clinician. Backup responders should have understandable roles and act after arrival.
+5. **Extrication:** move the patient with the stretcher through a compact, readable obstacle course.
+6. **Loading and handover:** load the stretcher into a parked ambulance, transition to a hospital bay, and give a structured verbal report. Driving is outside the first demo's scope.
+7. **Debrief:** show an explained score, what went well, what was missed, and a concise event timeline.
 
 ## Design pillars
 
-- **Readable touch controls:** Large, contextual controls; no keyboard dependency; minimal simultaneous button demands.
-- **Patient-first interaction:** The patient is a person to communicate with, not just an objective marker.
-- **Consequences with coaching:** Unsafe handling and missed steps should create understandable feedback and a chance to learn, not an arbitrary fail state.
-- **Physical handling matters:** Bags, the KOLE defibrillator, and the stretcher retain their existing physical behavior and remain usable across scenarios.
-- **Fictional, clinician-reviewed medical content:** Any clinical sequence or patient response must be checked by a qualified clinician before the game is presented as training. Simulated values are explicitly not real-world guidance.
-- **Small, testable milestones:** Each milestone should preserve the working touch-only loop and be verified on the target iPad when possible.
+- **Readable touch controls:** large contextual buttons, no keyboard requirement, and no need for several simultaneous button presses.
+- **Patient-first interaction:** the patient is a person to communicate with, not just a moving objective.
+- **Consequences with coaching:** unsafe handling and missed steps should create understandable feedback and a chance to learn.
+- **Physical handling matters:** bags, the KOLE defibrillator, and the stretcher should retain their existing physical feel across scenarios.
+- **Clinically grounded content:** do not invent a protocol, diagnosis, vitals response, or treatment rule. Use content supplied by the maintainer and obtain qualified clinical review before presenting a scenario as training.
+- **Small, testable increments:** preserve the working touch loop and test each physics or UI change on the target iPad when possible.
 
-## Scenario progression
+## Current prototype
 
-### Milestone 9 — First patient encounter
+The project already has touch movement/look, pickup and toss interactions, two paramedic bags, KOLE, and a 2.20 m stretcher with caster locks and a full-deck sticky pad. The current training patient is only a non-graphic interaction placeholder. It contains no symptoms, vital signs, diagnosis, or treatment rules. The PUSH button and recent physics/input reliability changes still need device testing.
 
-Add one non-graphic training patient, contextual assessment interaction, a compact status panel, and a clearly labeled fictional set of initial observations. This establishes the patient-facing loop without pretending to teach treatment.
+## Roadmap
 
-### Milestone 10 — Deliberate stretcher handling
+### Milestone 9 — Core reliability and first patient interaction
 
-Add an intentional PUSH action, preserve bumps under caster constraints, and make the control context clear. Tune a full push and stopping distance on the target iPad before adding more physics features.
+Current prototype work: recover stale touch IDs, keep stuck equipment aligned with the stretcher, preserve impacts under caster constraints, add a deliberate PUSH action, and establish a patient interaction placeholder. Validate these behaviors on iPad before relying on them in later scenarios.
 
-### Milestone 11 — Equipment and patient-state actions
+### Milestone 10 — Game structure
 
-Add deliberate equipment actions and a small scenario state machine. Use clear action feedback, make equipment condition legible, and keep interventions generic until a clinician-reviewed scenario has been selected.
+Add a simple main menu, pause/restart flow, and settings. Introduce a small `GameState`/event log and a scenario resource that names the location, objectives, patient case, hazards, and scoring criteria. Keep the state machine and event flow custom and small until the demo needs more; do not add third-party code without explicit approval and license review.
 
-### Milestone 12 — Patient transfer and stretcher transport
+### Milestone 11 — Stretcher obstacle course
 
-Add a controlled patient-to-stretcher transfer, secured patient state, a visible extraction zone, and transport feedback. Patient mass and balance should be tuned in isolated physics tests before joining the main scenario.
+Build one house blockout with a living room, hallway, exit, and driveway. Keep doors and corridors generous enough for the 1.0 m stretcher; create challenge with corners, clutter, rugs, thresholds, and furniture rather than unfairly narrow openings. Track hard stretcher impacts and time to exit. Whether the first demo includes stairs, a ramp, or a carry-down action is an open decision.
 
-### Milestone 13 — Call flow and debrief
+### Milestone 12 — People and transfer
 
-Add a short dispatch/briefing, pause/restart flow, objective tracking, and a debrief that explains the score. Avoid a punitive timer; prioritize safe sequence and clear feedback.
+Add a patient character, a small partner role, and any needed bystanders. Build a controlled floor-to-stretcher transfer and a secured patient state that follows the stretcher. Test patient mass and balance separately before combining them with the main scene. Add navigation only for NPC behavior that is needed in the demo.
 
-### Milestone 14 — Content and polish
+### Milestone 13 — Dialogue and history
 
-Add more clinician-reviewed scenarios, accessible text/audio options, environmental audio, and settings. Any borrowed code or assets must retain their licenses and notices.
+Add patient and bystander dialogue driven by each scenario resource. The maintainer supplies approved questions and answers; each asked question is recorded for debrief. Use a short, touch-friendly conversation UI rather than a large dialogue framework unless the content grows enough to justify one.
 
-## Current scope and assumptions
+### Milestone 14 — Assessment and patient state
 
-- The first playable scenario is a calm training case with one patient and fixed simulated observations.
-- The current scene is a practice bay, not a real-world ambulance or hospital.
-- No diagnosis, treatment recommendation, or claim of certification is made by the first patient-assessment milestone.
-- Stretcher turning with both caster pairs free and major physics tuning remain deferred until the existing handling has been tested on the iPad.
+Build assessment interactions, a compact findings display, and a scenario-driven patient-state model. Source all values and responses from the maintainer's local protocols and obtain qualified clinical review before student testing. Do not make the prototype's placeholder interaction look like medical instruction.
+
+### Milestone 15 — Backup and radio
+
+Add an in-game radio request and clear arrival feedback. Candidate roles in the current planning notes are advanced/critical care, police for an unsafe scene, and online medical control by radio/phone. Exact availability, timing, actions, and scoring depend on scenario and maintainer approval. Backup should be understandable and not silently take control away from the student.
+
+### Milestone 16 — Ambulance loading and handover
+
+Add a parked ambulance, an alignment-checked LOAD action, and a short loading animation. Fade to a simple hospital bay and let the player wheel the patient to a bed. Add a touch-friendly verbal handover using the format selected by the maintainer. Driving is deferred beyond the first demo.
+
+### Milestone 17 — Scenario, scoring, and debrief
+
+Build one complete scenario from approved content. Score the event log for safety, assessment, appropriate actions and timing, backup requests, stretcher handling, and handover. Explain each score with a short reason, and save results locally only if the instructor workflow requires it.
+
+### Milestone 18 — Polish and demo build
+
+Add licensed/CC0 audio and visuals, a short control tutorial, subtitle and text-size options, and performance testing on the oldest target iPad. Complete third-party notices before adding borrowed assets or code. Playtest with a small number of students and address the biggest usability issues.
+
+## Open decisions for later milestones
+
+- Stairs in the demo: omit them, provide a ramp, or add a partner-assisted carry action?
+- Does requesting backup that the scenario does not need affect the score?
+- Which local protocols and handover format should drive the first full scenario, and who will clinically review them?
+- How will students receive the demo: play on the maintainer's iPad or install it on other iPads?
+
+These decisions do not block the current non-clinical prototype. Ask before implementing any of them or authoring real clinical content.
