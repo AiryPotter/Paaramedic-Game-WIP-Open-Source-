@@ -1,0 +1,54 @@
+# Development Log
+
+## Milestone 1 — Basic environment and player movement
+
+- Added `scenes/main/main.tscn` with a lit training floor, two collision-enabled block obstacles, a capsule player, and a first-person camera.
+- Added `scripts/player/player_controller.gd` using `CharacterBody3D` for gravity and smoothed horizontal movement.
+- Configured the project to launch the new main scene.
+
+## Milestone 2 — Touch movement and look controls
+
+- Added `ui/mobile_controls.gd` with a floating left-side joystick and right-side drag-to-look input.
+- The controls track independent touch IDs, allowing movement and looking with two fingers.
+- Updated `PlayerController` with relative movement and clamped vertical camera look; UI remains decoupled through movement/look methods.
+- No keyboard controls, interaction buttons, or external dependencies were added.
+
+**Validation note:** The developer confirmed on iPad that the joystick and camera look work well. Re-test simultaneous two-finger input and touch release as needed.
+
+## Training-scene visibility and camera controls
+
+- Added a muted warm-gray floor, high-contrast orange and teal obstacles, a dark blue-gray background, and soft ambient illumination.
+- Increased the first-person camera FOV to 85 degrees.
+- Added a visible right-side LOOK pad with a responsive thumb indicator while retaining drag-to-look input.
+- Kept the original low-poly geometry and gameplay unchanged. The developer confirmed the scene looks good.
+
+## Milestone 3 — Physical object interaction
+
+- Added a reusable `HoldableObject` rigid-body component and a `PickupInteractor` that queues camera-ray pickup/release requests for physics ticks.
+- Added a temporary yellow test pickup in `scenes/equipment/test_pickup.tscn`.
+- Added a center reticle and an on-screen INTERACT button; the button is excluded from look-touch tracking.
+- Held objects are frozen and moved to a camera-relative hold point; release restores collision and physics and inherits some player velocity.
+- The developer confirmed pickup and release work in the running game.
+
+## Milestone 4 — Paramedic bags
+
+- Added primary and secondary low-poly physical bag scenes, each with collision and the reusable holdable script.
+- Replaced the test pickup in the main scene with both bags, placed within the training area.
+- Bags can be picked up, carried, and physically set down using the existing INTERACT control. A contextual TOSS button now provides a short, capped underhand toss. Stretcher-deck placement is deferred until it is integrated with the stretcher.
+- The developer approved the bag models and requested the stretcher as the next milestone.
+
+## Milestone 5 — Stretcher and grab mode
+
+- Added a reusable low-poly stretcher scene with a deck, frame, four wheel meshes, and physics collision shapes.
+- Added a grab/release path to the existing interaction button. The stretcher can be grabbed from its ends or either long side; the operator offset changes while the camera stays at the same third-person orientation.
+- While grabbed, the vertical joystick axis drives the stretcher forward/back with rigid-body force, the horizontal axis provides basic yaw steering, and the player follows the nearest handle position.
+- Added a smooth camera transition from first person to a fixed third-person view during stretcher mode; look rotation is disabled while pushing.
+- Set separate reach limits: 5.5 m for the stretcher and 2.0 m for bags. Added a contextual TOSS control for held bags with a 2.8 m/s launch-speed cap and slight upward arc.
+## Milestone 6 — Caster locks and touch reliability
+
+- Added independent front and rear caster swivel locks with controls available during stretcher mode.
+- Locking spreads the matching caster legs and animates its end lever; unlocking narrows the legs and returns the lever. These animations are separate from the grab/release camera tween.
+- Both caster pairs free: joystick direction drives omnidirectional movement and free casters swivel toward travel. One pair locked: the other pair steers in a car-like mode. Both pairs locked: the stretcher rolls straight in its current wheel direction; brakes remain separate and are not implemented here.
+- Added front/rear operating positions so the player can grab from either end or side while keeping a consistent third-person camera orientation.
+- Added cancellation, focus-loss, pause, and scene-exit cleanup to reset touch input and release a stuck movement joystick.
+- Runtime validation is pending: verify each steering mode, lock/unlock leg and lever animations, both-side interaction, bag reach/toss distance, and joystick recovery after interrupting touch input.

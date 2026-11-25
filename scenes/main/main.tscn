@@ -1,0 +1,134 @@
+[gd_scene load_steps=19 format=3 uid="uid://bl1m6lkwlffoi"]
+
+[ext_resource type="Script" uid="uid://bdagxbsb8gt" path="res://scripts/player/player_controller.gd" id="1_player"]
+[ext_resource type="Script" uid="uid://b3jawsy5my7sg" path="res://ui/mobile_controls.gd" id="2_mobile_controls"]
+[ext_resource type="PackedScene" path="res://scenes/equipment/primary_bag.tscn" id="3_primary_bag"]
+[ext_resource type="PackedScene" path="res://scenes/equipment/secondary_bag.tscn" id="5_secondary_bag"]
+[ext_resource type="Script" path="res://scripts/interaction/pickup_interactor.gd" id="4_pickup_interactor"]
+[ext_resource type="PackedScene" path="res://scenes/stretcher/stretcher.tscn" id="6_stretcher"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(24, 0.2, 24)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(24, 0.2, 24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_obstacle_a"]
+size = Vector3(2, 1.5, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_obstacle_a"]
+size = Vector3(2, 1.5, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_obstacle_b"]
+size = Vector3(1.5, 1, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_obstacle_b"]
+size = Vector3(1.5, 1, 2)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.48, 0.46, 0.4, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_obstacle_a"]
+albedo_color = Color(0.95, 0.32, 0.08, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_obstacle_b"]
+albedo_color = Color(0.05, 0.48, 0.52, 1)
+roughness = 1.0
+
+[sub_resource type="Environment" id="Environment_training"]
+background_mode = 1
+background_color = Color(0.12, 0.18, 0.22, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.72, 0.78, 0.84, 1)
+ambient_light_energy = 0.8
+
+[node name="Main" type="Node3D" unique_id=751350397]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_training")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=547214209]
+transform = Transform3D(0.8253356, 0.4050497, -0.3933902, 0, 0.6967067, 0.7173561, 0.5646425, -0.59205955, 0.57501686, 0, 0, 0)
+shadow_enabled = true
+
+[node name="TrainingFloor" type="StaticBody3D" parent="." unique_id=30691957]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+
+[node name="FloorMesh" type="MeshInstance3D" parent="TrainingFloor" unique_id=779636441]
+mesh = SubResource("BoxMesh_floor")
+material_override = SubResource("Material_floor")
+
+[node name="FloorCollision" type="CollisionShape3D" parent="TrainingFloor" unique_id=330492314]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="ObstacleA" type="StaticBody3D" parent="." unique_id=542386128]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.75, -2)
+
+[node name="Mesh" type="MeshInstance3D" parent="ObstacleA" unique_id=192157180]
+mesh = SubResource("BoxMesh_obstacle_a")
+material_override = SubResource("Material_obstacle_a")
+
+[node name="Collision" type="CollisionShape3D" parent="ObstacleA" unique_id=862096553]
+shape = SubResource("BoxShape3D_obstacle_a")
+
+[node name="ObstacleB" type="StaticBody3D" parent="." unique_id=1792268613]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -4)
+
+[node name="Mesh" type="MeshInstance3D" parent="ObstacleB" unique_id=777332555]
+mesh = SubResource("BoxMesh_obstacle_b")
+material_override = SubResource("Material_obstacle_b")
+
+[node name="Collision" type="CollisionShape3D" parent="ObstacleB" unique_id=1219253348]
+shape = SubResource("BoxShape3D_obstacle_b")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1115007235]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+script = ExtResource("1_player")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Player" unique_id=380245770]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_player")
+
+[node name="BodyCollision" type="CollisionShape3D" parent="Player" unique_id=1783173113]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Camera3D" type="Camera3D" parent="Player" unique_id=1297847111]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
+fov = 85.0
+current = true
+
+[node name="HoldPoint" type="Marker3D" parent="Player/Camera3D"]
+position = Vector3(0, -0.2, -1.35)
+
+[node name="Interactor" type="Node" parent="Player"]
+script = ExtResource("4_pickup_interactor")
+
+[node name="PrimaryBag" parent="." instance=ExtResource("3_primary_bag")]
+position = Vector3(-1.0, 0.23, 2.7)
+
+[node name="SecondaryBag" parent="." instance=ExtResource("5_secondary_bag")]
+position = Vector3(1.0, 0.19, 2.7)
+
+[node name="Stretcher" parent="." instance=ExtResource("6_stretcher")]
+position = Vector3(0, 0.12, 0.8)
+
+[node name="MobileControlsLayer" type="CanvasLayer" parent="." unique_id=1864688205]
+
+[node name="MobileControls" type="Control" parent="MobileControlsLayer" unique_id=1953264818]
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("2_mobile_controls")
+player_path = NodePath("../../Player")
+interactor_path = NodePath("../../Player/Interactor")

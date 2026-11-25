@@ -1,0 +1,44 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/interaction/holdable_object.gd" id="1_holdable"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bag"]
+size = Vector3(0.62, 0.38, 0.42)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bag"]
+size = Vector3(0.62, 0.38, 0.42)
+
+[sub_resource type="BoxMesh" id="BoxMesh_handle"]
+size = Vector3(0.28, 0.07, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_front_panel"]
+size = Vector3(0.44, 0.18, 0.025)
+
+[sub_resource type="StandardMaterial3D" id="Material_secondary_bag"]
+albedo_color = Color(0.04, 0.34, 0.39, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_bag_trim"]
+albedo_color = Color(0.92, 0.84, 0.62, 1)
+roughness = 1.0
+
+[node name="SecondaryBag" type="RigidBody3D" groups=["pickupable"]]
+mass = 1.8
+script = ExtResource("1_holdable")
+
+[node name="BagBody" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_bag")
+material_override = SubResource("Material_secondary_bag")
+
+[node name="Handle" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.225, 0)
+mesh = SubResource("BoxMesh_handle")
+material_override = SubResource("Material_bag_trim")
+
+[node name="FrontPanel" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, 0.223)
+mesh = SubResource("BoxMesh_front_panel")
+material_override = SubResource("Material_bag_trim")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_bag")

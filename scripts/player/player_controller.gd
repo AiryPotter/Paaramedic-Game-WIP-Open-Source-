@@ -1,0 +1,110 @@
+extends CharacterBody3D
+class_name PlayerController
+
+## Touch input is supplied by the mobile controls UI through these methods.
+
+@export var move_speed: float = 4.0
+@export var ground_acceleration: float = 18.0
+@export var gravity: float = 18.0
+@export_range(-1.5, -0.2, 0.05) var minimum_look_pitch: float = -1.2
+@export_range(0.2, 1.5, 0.05) var maximum_look_pitch: float = 1.2
+
+var movement_input: Vector2 = Vector2.ZERO
+var look_movement_input: Vector2 = Vector2.ZERO
+var grabbed_stretcher: RigidBody3D
+var _camera_tween: Tween
+var _walk_camera_position: Vector3
+var _walk_camera_rotation: Vector3
+var _walk_camera_fov: float
+@onready var player_camera: Camera3D = $Camera3D
+
+
+func _ready() -> void:
+	_walk_camera_position = player_camera.position
+	_walk_camera_rotation = player_camera.rotation
+	_walk_camera_fov = player_camera.fov
+
+
+func set_movement_input(input_vector: Vector2) -> void:
+	movement_input = input_vector.limit_length(1.0)
+
+
+func set_look_movement_input(input_vector: Vector2) -> void:
+	look_movement_input = input_vector.limit_length(1.0)
+
+
+func _combined_movement_input() -> Vector2:
+	return (movement_input + look_movement_input).limit_length(1.0)
+
+
+func apply_look(look_delta: Vector2) -> void:
+	if is_instance_valid(grabbed_stretcher):
+		if bool(grabbed_stretcher.call("are_both_casters_unlocked")):
+			return
+		player_camera.rotation.y = clampf(player_camera.rotation.y - look_delta.x, -1.0, 1.0)
+		player_camera.rotation.x = clampf(player_camera.rotation.x - look_delta.y, -0.75, 0.4)
+		return
+	rotation.y -= look_delta.x
+	player_camera.rotation.x = clampf(
+		player_camera.rotation.x - look_delta.y,
+		minimum_look_pitch,
+		maximum_look_pitch
+	)
+
+
+func enter_stretcher_mode(stretcher: RigidBody3D) -> void:
+	grabbed_stretcher = stretcher
+	look_movement_input = Vector2.ZERO
+	rotation.y = stretcher.rotation.y
+	_walk_camera_rotation = player_camera.rotation
+	_transition_camera(
+		Vector3(0.0, 2.6, 4.2),
+		Vector3(-0.28, 0.0, 0.0),
+		78.0
+	)
+
+
+func exit_stretcher_mode() -> void:
+	grabbed_stretcher = null
+	movement_input = Vector2.ZERO
+	look_movement_input = Vector2.ZERO
+	_transition_camera(_walk_camera_position, _walk_camera_rotation, _walk_camera_fov)
+
+
+func _transition_camera(target_position: Vector3, target_rotation: Vector3, target_fov: float) -> void:
+	if is_instance_valid(_camera_tween) and _camera_tween.is_running():
+		_camera_tween.kill()
+	_camera_tween = create_tween()
+	_camera_tween.set_parallel(true)
+	_camera_tween.set_trans(Tween.TRANS_SINE)
+	_camera_tween.set_ease(Tween.EASE_IN_OUT)
+	_camera_tween.tween_property(player_camera, "position", target_position, 0.65)
+	_camera_tween.tween_property(player_camera, "rotation", target_rotation, 0.65)
+	_camera_tween.tween_property(player_camera, "fov", target_fov, 0.65)
+
+
+func _physics_process(delta: float) -> void:
+	if is_instance_valid(grabbed_stretcher):
+		rotation.y = grabbed_stretcher.rotation.y
+		var target_position: Vector3 = grabbed_stretcher.call("get_operator_position")
+		var follow_velocity := (target_position - global_position) / maxf(delta, 0.001)
+		velocity = Vector3(follow_velocity.x, 0.0, follow_velocity.z)
+		grabbed_stretcher.call("set_operator_input", _combined_movement_input())
+		move_and_slide()
+		return
+
+	var current_movement := _combined_movement_input()
+	var local_direction := Vector3(current_movement.x, 0.0, current_movement.y)
+	var world_direction := global_basis * local_direction
+	world_direction.y = 0.0
+	world_direction = world_direction.normalized() if world_direction.length_squared() > 0.0 else Vector3.ZERO
+	var target_velocity := world_direction * move_speed
+	velocity.x = move_toward(velocity.x, target_velocity.x, ground_acceleration * delta)
+	velocity.z = move_toward(velocity.z, target_velocity.z, ground_acceleration * delta)
+
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+	else:
+		velocity.y = 0.0
+
+	move_and_slide()
