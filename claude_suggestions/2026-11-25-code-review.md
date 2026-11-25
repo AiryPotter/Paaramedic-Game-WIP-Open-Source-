@@ -67,7 +67,14 @@ var yaw_rate := drive_speed * tan(steer) / wheelbase  # front pair steers
 # If the rear pair steers: -drive_speed * tan(steer) / wheelbase
 ```
 
-- **Maintainer decision:** Should stick-right always turn the stretcher right, or should trailing casters steer like a forklift?
+- **Maintainer decision (2026-11-25): forklift style.** When the trailing casters steer, stick-right swings the trailing end right and the leading end left. When the leading casters steer, stick-right turns right.
+- **What this means:** The current yaw signs for end operators already do this, so **keep them**. Fix the wheel visuals to match. With the formulas above, one steering angle works for either free pair and from either end:
+
+```gdscript
+var steer := -lateral_input * max_steer_angle  # try 0.4 radians
+# Ease the free casters toward rotation.y = steer. Do not flip it in reverse;
+# the sign of drive_speed already reverses the turn.
+```
 
 ### 4. Locked stretcher can roll sideways or diagonally
 - **File:** `scripts/stretcher/stretcher_controller.gd:42-47, 208-223, 230-233`
@@ -182,7 +189,7 @@ var drive_speed := -desired_local.z * maximum_speed  # along local -Z
 
 ## Questions for the maintainer
 
-1. Should stick-right always turn the stretcher right, or behave differently when the trailing casters steer?
+1. Answered: forklift style when the trailing casters steer (see item 3).
 2. Should side operators be able to steer with casters locked, or only reposition?
 3. Should the stretcher stop on release, or coast until brakes are added?
 4. Is the 5.5 m stretcher grab reach intentional?
