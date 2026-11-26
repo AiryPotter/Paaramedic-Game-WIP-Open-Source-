@@ -18,7 +18,7 @@ rough = false
 bounce = 0.0
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_pad_area"]
-size = Vector3(1.0, 0.03, 2.2)
+size = Vector3(1.45, 0.66, 2.7)
 
 [sub_resource type="BoxMesh" id="BoxMesh_deck"]
 size = Vector3(1.0, 0.18, 2.2)
@@ -61,21 +61,23 @@ axis_lock_angular_x = true
 axis_lock_angular_z = true
 script = ExtResource("1_stretcher_controller")
 
-[node name="Deck" type="MeshInstance3D" parent="."]
+[node name="DeckAssembly" type="Node3D" parent="."]
+
+[node name="Deck" type="MeshInstance3D" parent="DeckAssembly"]
 position = Vector3(0, 0.73, 0)
 mesh = SubResource("BoxMesh_deck")
 material_override = SubResource("Material_deck")
 
-[node name="CollisionDeck" type="CollisionShape3D" parent="."]
+[node name="CollisionDeck" type="CollisionShape3D" parent="DeckAssembly"]
 position = Vector3(0, 0.73, 0)
 shape = SubResource("BoxShape3D_deck")
 
-[node name="PadArea" type="Area3D" parent="."]
+[node name="PadArea" type="Area3D" parent="DeckAssembly"]
 collision_layer = 0
 collision_mask = 1
 
-[node name="Collision" type="CollisionShape3D" parent="PadArea"]
-position = Vector3(0, 0.835, 0)
+[node name="Collision" type="CollisionShape3D" parent="DeckAssembly/PadArea"]
+position = Vector3(0, 1.15, 0)
 shape = SubResource("BoxShape3D_pad_area")
 
 [node name="CollisionFloorSupport" type="CollisionShape3D" parent="."]
@@ -102,22 +104,22 @@ position = Vector3(0.48, 0.18, 0.8)
 rotation = Vector3(0, 0, 1.5708)
 shape = SubResource("CylinderShape3D_wheel")
 
-[node name="SideRailLeft" type="MeshInstance3D" parent="."]
+[node name="SideRailLeft" type="MeshInstance3D" parent="DeckAssembly"]
 position = Vector3(-0.46, 0.43, 0)
 mesh = SubResource("BoxMesh_rail")
 material_override = SubResource("Material_frame")
 
-[node name="SideRailRight" type="MeshInstance3D" parent="."]
+[node name="SideRailRight" type="MeshInstance3D" parent="DeckAssembly"]
 position = Vector3(0.46, 0.43, 0)
 mesh = SubResource("BoxMesh_rail")
 material_override = SubResource("Material_frame")
 
-[node name="CrossbarFront" type="MeshInstance3D" parent="."]
+[node name="CrossbarFront" type="MeshInstance3D" parent="DeckAssembly"]
 position = Vector3(0, 0.36, -0.965)
 mesh = SubResource("BoxMesh_crossbar")
 material_override = SubResource("Material_frame")
 
-[node name="CrossbarBack" type="MeshInstance3D" parent="."]
+[node name="CrossbarBack" type="MeshInstance3D" parent="DeckAssembly"]
 position = Vector3(0, 0.36, 0.965)
 mesh = SubResource("BoxMesh_crossbar")
 material_override = SubResource("Material_frame")

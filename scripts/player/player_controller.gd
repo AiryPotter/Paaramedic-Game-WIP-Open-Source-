@@ -13,6 +13,8 @@ var movement_input: Vector2 = Vector2.ZERO
 var look_movement_input: Vector2 = Vector2.ZERO
 var grabbed_stretcher: RigidBody3D
 var _camera_tween: Tween
+var _camera_transitioning: bool = false
+var _walk_camera_saved: bool = false
 var _walk_camera_position: Vector3
 var _walk_camera_rotation: Vector3
 var _walk_camera_fov: float
@@ -54,17 +56,12 @@ func _combined_movement_input() -> Vector2:
 
 
 func apply_look(look_delta: Vector2) -> void:
+	if _camera_transitioning:
+		return
 	if is_instance_valid(grabbed_stretcher):
 		_stretcher_camera_yaw = wrapf(_stretcher_camera_yaw - look_delta.x, -PI, PI)
 		_stretcher_camera_pitch = clampf(_stretcher_camera_pitch - look_delta.y, -0.75, -0.12)
-		if is_instance_valid(_camera_tween) and _camera_tween.is_running():
-			_transition_camera(
-				_stretcher_camera_local_position(),
-				Vector3(_stretcher_camera_pitch, _stretcher_camera_yaw, 0.0),
-				78.0
-			)
-		else:
-			_update_stretcher_camera_orbit()
+		_update_stretcher_camera_orbit()
 		return
 	rotation.y -= look_delta.x
 	player_camera.rotation.x = clampf(
@@ -75,13 +72,17 @@ func apply_look(look_delta: Vector2) -> void:
 
 
 func enter_stretcher_mode(stretcher: RigidBody3D, facing_yaw_offset: float = 0.0) -> void:
+	if not _walk_camera_saved:
+		_walk_camera_position = player_camera.position
+		_walk_camera_rotation = player_camera.rotation
+		_walk_camera_fov = player_camera.fov
+		_walk_camera_saved = true
 	grabbed_stretcher = stretcher
 	look_movement_input = Vector2.ZERO
 	_stretcher_camera_yaw = 0.0
 	_stretcher_camera_pitch = -0.36
 	_stretcher_facing_yaw_offset = facing_yaw_offset
 	rotation.y = stretcher.rotation.y + _stretcher_facing_yaw_offset
-	_walk_camera_rotation = player_camera.rotation
 	_transition_camera(
 		_stretcher_camera_local_position(),
 		Vector3(_stretcher_camera_pitch, _stretcher_camera_yaw, 0.0),
@@ -115,13 +116,29 @@ func _update_stretcher_camera_orbit() -> void:
 func _transition_camera(target_position: Vector3, target_rotation: Vector3, target_fov: float) -> void:
 	if is_instance_valid(_camera_tween) and _camera_tween.is_running():
 		_camera_tween.kill()
+	var shortest_rotation := target_rotation
+	shortest_rotation.y = player_camera.rotation.y + wrapf(
+		target_rotation.y - player_camera.rotation.y,
+		-PI,
+		PI
+	)
+	_camera_transitioning = true
 	_camera_tween = create_tween()
 	_camera_tween.set_parallel(true)
 	_camera_tween.set_trans(Tween.TRANS_SINE)
 	_camera_tween.set_ease(Tween.EASE_IN_OUT)
 	_camera_tween.tween_property(player_camera, "position", target_position, 0.65)
-	_camera_tween.tween_property(player_camera, "rotation", target_rotation, 0.65)
+	_camera_tween.tween_property(player_camera, "rotation", shortest_rotation, 0.65)
 	_camera_tween.tween_property(player_camera, "fov", target_fov, 0.65)
+	_camera_tween.finished.connect(_on_camera_transition_finished)
+
+
+func _on_camera_transition_finished() -> void:
+	_camera_transitioning = false
+	if is_instance_valid(grabbed_stretcher):
+		_update_stretcher_camera_orbit()
+	else:
+		_walk_camera_saved = false
 
 
 func _apply_stretcher_bump_impulses(impact_velocity: Vector3) -> void:
@@ -129,7 +146,12 @@ func _apply_stretcher_bump_impulses(impact_velocity: Vector3) -> void:
 		var collision := get_slide_collision(collision_index)
 		var collider := collision.get_collider()
 		if collider is RigidBody3D and collider.is_in_group("grabbable_stretcher"):
-			collider.call("apply_character_bump", impact_velocity, collision.get_normal())
+			collider.call(
+				"apply_character_bump",
+				impact_velocity,
+				collision.get_normal(),
+				collision.get_position()
+			)
 
 
 func _physics_process(delta: float) -> void:

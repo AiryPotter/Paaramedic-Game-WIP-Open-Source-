@@ -3,8 +3,8 @@ class_name PickupInteractor
 
 ## Queues touch-triggered pickup/release requests for the physics tick.
 
-@export var bag_interaction_distance: float = 2.0
-@export var stretcher_interaction_distance: float = 5.5
+@export var bag_interaction_distance: float = 2.8
+@export var stretcher_interaction_distance: float = 6.5
 @export_range(0.5, 4.0, 0.1) var maximum_toss_speed: float = 2.8
 
 var player: CharacterBody3D
@@ -18,6 +18,8 @@ var _push_requested: bool = false
 var _aimed_collider: Object
 var _aimed_distance: float = INF
 var _training_patient: Node
+var _stretcher: RigidBody3D
+var _height_toggle_requested: bool = false
 
 
 func _ready() -> void:
@@ -25,12 +27,14 @@ func _ready() -> void:
 	player_camera = player.get_node("Camera3D") as Camera3D
 	hold_point = player_camera.get_node("HoldPoint") as Node3D
 	_training_patient = get_tree().get_first_node_in_group("training_patient")
+	_stretcher = get_tree().get_first_node_in_group("grabbable_stretcher") as RigidBody3D
 
 
 func request_interaction() -> void:
 	_interaction_requested = true
 	_toss_requested = false
 	_push_requested = false
+	_height_toggle_requested = false
 
 
 func request_toss() -> void:
@@ -38,6 +42,7 @@ func request_toss() -> void:
 		_toss_requested = true
 		_interaction_requested = false
 		_push_requested = false
+		_height_toggle_requested = false
 
 
 func request_push() -> void:
@@ -45,6 +50,28 @@ func request_push() -> void:
 		_push_requested = true
 		_interaction_requested = false
 		_toss_requested = false
+		_height_toggle_requested = false
+
+
+func can_change_stretcher_height() -> bool:
+	return (
+		is_instance_valid(grabbed_stretcher)
+		and bool(grabbed_stretcher.call("can_change_height"))
+	)
+
+
+func get_stretcher_height_label() -> String:
+	if is_instance_valid(grabbed_stretcher):
+		return str(grabbed_stretcher.call("get_height_action_label"))
+	return "LOWER"
+
+
+func request_height_toggle() -> void:
+	if is_instance_valid(grabbed_stretcher) and can_change_stretcher_height():
+		_height_toggle_requested = true
+		_interaction_requested = false
+		_toss_requested = false
+		_push_requested = false
 
 
 func can_push_stretcher() -> bool:
@@ -95,24 +122,45 @@ func toggle_rear_caster_lock() -> void:
 
 func get_action_label() -> String:
 	if is_instance_valid(held_object):
-		return "DROP ITEM"
+		return "DROP PATIENT" if held_object.is_in_group("training_patient") else "DROP ITEM"
 	if is_instance_valid(grabbed_stretcher):
 		return "RELEASE STRETCHER"
-	if _aimed_collider is Node and (_aimed_collider as Node).is_in_group("training_patient"):
-		return "ASSESS PATIENT" if _aimed_distance <= bag_interaction_distance else "APPROACH PATIENT"
+	var patient := _get_aimed_patient()
+	if is_instance_valid(patient):
+		if _aimed_distance > bag_interaction_distance:
+			return "APPROACH PATIENT"
+		if bool(patient.get("is_loaded")):
+			return "PATIENT LOADED"
+		return "PICK UP PATIENT" if bool(patient.get("assessment_started")) else "ASSESS PATIENT"
 	return "INTERACT"
 
 
 func get_status_text() -> String:
-	if is_instance_valid(_training_patient) and _training_patient.has_method("get_hud_text"):
+	if not is_instance_valid(_training_patient) or not _training_patient.has_method("get_hud_text"):
+		return "TRAINING CASE 01\nFind the patient and assess them."
+	if bool(_training_patient.get("is_loaded")):
 		return str(_training_patient.call("get_hud_text"))
-	return "TRAINING CASE 01\nFind the patient and assess them."
+	if not bool(_training_patient.get("assessment_started")):
+		return str(_training_patient.call("get_hud_text"))
+	if not is_instance_valid(_stretcher):
+		return "Assessment recorded. Bring the stretcher to the mannequin."
+	if not bool(_stretcher.call("is_lowered_for_loading")):
+		return "Assessment recorded. Stop and lower the stretcher before securing the mannequin."
+	if is_instance_valid(held_object) and held_object.is_in_group("training_patient"):
+		return "Mannequin held. Aim at the lowered deck and tap TOSS."
+	return "Stretcher lowered. Pick up and toss the mannequin onto the deck to secure it."
 
 
 func _physics_process(_delta: float) -> void:
 	_refresh_aim_target()
 	if is_instance_valid(held_object):
 		held_object.follow_hold_point(hold_point.global_transform)
+
+	if _height_toggle_requested:
+		_height_toggle_requested = false
+		if is_instance_valid(grabbed_stretcher):
+			grabbed_stretcher.call("toggle_height")
+		return
 
 	if _push_requested:
 		_push_requested = false
@@ -146,9 +194,10 @@ func _refresh_aim_target() -> void:
 	var query := PhysicsRayQueryParameters3D.create(
 		origin,
 		origin + forward * stretcher_interaction_distance,
-		player.collision_mask,
+		player.collision_mask | 2,
 		[player.get_rid()]
 	)
+	query.collide_with_areas = true
 	var hit := player.get_world_3d().direct_space_state.intersect_ray(query)
 	if hit.is_empty():
 		return
@@ -156,8 +205,31 @@ func _refresh_aim_target() -> void:
 	_aimed_distance = origin.distance_to(hit.get("position"))
 
 
+func _get_aimed_patient() -> Node:
+	if not _aimed_collider is Node:
+		return null
+	var target := _aimed_collider as Node
+	while target != null:
+		if target.is_in_group("training_patient"):
+			return target
+		target = target.get_parent()
+	return null
+
+
 func _try_pick_up_object() -> void:
 	if not is_instance_valid(_aimed_collider):
+		return
+
+	var patient := _get_aimed_patient()
+	if is_instance_valid(patient):
+		if _aimed_distance > bag_interaction_distance or bool(patient.get("is_loaded")):
+			return
+		if not bool(patient.get("assessment_started")):
+			patient.call("assess_patient")
+			return
+		if patient is HoldableObject and not bool(patient.get("is_held")):
+			held_object = patient as HoldableObject
+			held_object.pick_up(hold_point.global_transform)
 		return
 
 	var collider: Object = _aimed_collider
@@ -165,9 +237,6 @@ func _try_pick_up_object() -> void:
 		if _aimed_distance <= bag_interaction_distance:
 			held_object = collider as HoldableObject
 			held_object.pick_up(hold_point.global_transform)
-	elif collider is Node and (collider as Node).is_in_group("training_patient"):
-		if _aimed_distance <= bag_interaction_distance:
-			(collider as Node).call("assess_patient")
 	elif collider is RigidBody3D and collider.is_in_group("grabbable_stretcher"):
 		if _aimed_distance <= stretcher_interaction_distance and bool(collider.call("grab", player)):
 			grabbed_stretcher = collider as RigidBody3D

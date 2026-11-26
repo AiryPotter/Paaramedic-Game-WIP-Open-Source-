@@ -27,7 +27,7 @@ A complete, replayable call should include:
 
 ## Current prototype
 
-The project already has touch movement/look, pickup and toss interactions, two paramedic bags, KOLE, and a 2.20 m stretcher with caster locks and a full-deck sticky pad. The current training patient is only a non-graphic interaction placeholder. It contains no symptoms, vital signs, diagnosis, or treatment rules. The PUSH button and recent physics/input reliability changes still need device testing.
+The project already has touch movement/look, pickup and toss interactions, two paramedic bags, KOLE, and a 2.20 m stretcher with caster locks and a full-deck sticky pad. The current training patient is a non-graphic interaction and loading placeholder. It contains no symptoms, vital signs, diagnosis, or treatment rules. The stretcher can lower its deck, accept the patient when aligned, then raise for transport. The PUSH button and recent physics/input reliability changes still need device testing.
 
 ## Roadmap
 

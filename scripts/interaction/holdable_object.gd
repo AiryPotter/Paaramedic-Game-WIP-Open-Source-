@@ -4,6 +4,7 @@ class_name HoldableObject
 ## A reusable physical object that can be held, released, or secured to the stretcher pad.
 
 @export var pad_resting_height: float = 0.3
+@export var pad_resting_offset_y: float = 0.0
 
 var is_held: bool = false
 var is_stuck: bool = false
@@ -49,6 +50,16 @@ func stick_to_surface(surface: RigidBody3D, local_transform: Transform3D) -> voi
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	_follow_stuck_surface()
+
+
+func get_stuck_local_position_y() -> float:
+	return _stuck_local_transform.origin.y
+
+
+func set_stuck_local_position_y(value: float) -> void:
+	if not is_stuck:
+		return
+	_stuck_local_transform.origin.y = value
 
 
 func unstick_from_surface() -> void:

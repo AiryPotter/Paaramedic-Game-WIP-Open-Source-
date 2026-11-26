@@ -16,8 +16,10 @@ class_name StretcherController
 
 const WHEELBASE: float = 1.6
 const PAD_TOP_LOCAL_Y: float = 0.82
+const LOWERED_DECK_OFFSET: float = -0.22
 
-@onready var _pad_area: Area3D = $PadArea
+@onready var _deck_assembly: Node3D = $DeckAssembly
+@onready var _pad_area: Area3D = $DeckAssembly/PadArea
 
 var operator: CharacterBody3D
 var operator_input: Vector2 = Vector2.ZERO
@@ -27,6 +29,7 @@ var operator_right_local: Vector3 = Vector3(1.0, 0.0, 0.0)
 var operator_facing_yaw_offset: float = 0.0
 var front_casters_locked: bool = false
 var rear_casters_locked: bool = false
+var is_lowered: bool = false
 
 var _front_casters: Array[Node3D] = []
 var _rear_casters: Array[Node3D] = []
@@ -38,6 +41,14 @@ var _front_width_tween: Tween
 var _rear_width_tween: Tween
 var _front_lever_tween: Tween
 var _rear_lever_tween: Tween
+var _height_tween: Tween
+var _height_target_lowered: bool = false
+var _height_starting_offset: float = 0.0
+var _height_target_offset: float = 0.0
+var _height_stuck_items: Array[HoldableObject] = []
+var _height_stuck_start_heights: Array[float] = []
+var _pending_bump_impulse: Vector3 = Vector3.ZERO
+var _pending_bump_offset: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
@@ -61,12 +72,10 @@ func grab(player: CharacterBody3D) -> bool:
 	operator = player
 	operator_input = Vector2.ZERO
 	operator_offset = _nearest_operator_offset(player.global_position)
-	operator_facing_yaw_offset = wrapf(player.rotation.y - rotation.y, -PI, PI)
-	operator_forward_local = global_basis.inverse() * (-player.global_basis.z)
-	operator_forward_local.y = 0.0
+	operator_forward_local = Vector3(-operator_offset.x, 0.0, -operator_offset.z).normalized()
 	if operator_forward_local.length_squared() < 0.01:
 		operator_forward_local = Vector3(0.0, 0.0, -1.0)
-	operator_forward_local = operator_forward_local.normalized()
+	operator_facing_yaw_offset = atan2(-operator_forward_local.x, -operator_forward_local.z)
 	operator_right_local = operator_forward_local.cross(Vector3.UP).normalized()
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
@@ -138,8 +147,75 @@ func get_rear_lock_label() -> String:
 	return "REAR: LOCKED" if rear_casters_locked else "REAR: FREE"
 
 
+func get_pad_top_local_y() -> float:
+	return PAD_TOP_LOCAL_Y + _deck_assembly.position.y
+
+
+func is_lowered_for_loading() -> bool:
+	if not is_lowered:
+		return false
+	return not is_instance_valid(_height_tween) or not _height_tween.is_running()
+
+
+func can_change_height() -> bool:
+	if not is_instance_valid(operator):
+		return false
+	if is_instance_valid(_height_tween) and _height_tween.is_running():
+		return false
+	return Vector2(linear_velocity.x, linear_velocity.z).length() <= 0.15
+
+
+func get_height_action_label() -> String:
+	if is_instance_valid(_height_tween) and _height_tween.is_running():
+		return "LOWERING..." if _height_target_lowered else "RAISING..."
+	if not can_change_height():
+		return "STOP TO RAISE" if is_lowered else "STOP TO LOWER"
+	return "RAISE" if is_lowered else "LOWER"
+
+
+func _set_height_progress(progress: float) -> void:
+	var current_offset := lerpf(_height_starting_offset, _height_target_offset, progress)
+	_deck_assembly.position.y = current_offset
+	var height_delta := current_offset - _height_starting_offset
+	for index in range(_height_stuck_items.size()):
+		var item := _height_stuck_items[index]
+		if is_instance_valid(item):
+			item.set_stuck_local_position_y(_height_stuck_start_heights[index] + height_delta)
+
+
+func _finish_height_transition() -> void:
+	is_lowered = _height_target_lowered
+	_height_stuck_items.clear()
+	_height_stuck_start_heights.clear()
+
+
+func toggle_height() -> bool:
+	if not can_change_height():
+		return false
+
+	_height_target_lowered = not is_lowered
+	_height_starting_offset = _deck_assembly.position.y
+	_height_target_offset = LOWERED_DECK_OFFSET if _height_target_lowered else 0.0
+	_height_stuck_items.clear()
+	_height_stuck_start_heights.clear()
+	for candidate in get_tree().get_nodes_in_group("pickupable"):
+		if candidate is HoldableObject:
+			var item := candidate as HoldableObject
+			if item.is_stuck and item.stuck_to == self:
+				_height_stuck_items.append(item)
+				_height_stuck_start_heights.append(item.get_stuck_local_position_y())
+
+	_height_tween = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_height_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_height_tween.tween_method(_set_height_progress, 0.0, 1.0, 0.55)
+	_height_tween.finished.connect(_finish_height_transition)
+	return true
+
+
 func can_push_from_operator(player: CharacterBody3D) -> bool:
 	if not is_instance_valid(operator) or operator != player:
+		return false
+	if is_instance_valid(_height_tween) and _height_tween.is_running():
 		return false
 	var push_direction := -player.global_basis.z
 	push_direction.y = 0.0
@@ -262,7 +338,11 @@ func _sync_wheel_colliders() -> void:
 		_rear_wheel_colliders[index].transform = _rear_casters[index].transform * wheel_local_transform
 
 
-func apply_character_bump(player_velocity: Vector3, surface_normal: Vector3) -> void:
+func apply_character_bump(
+	player_velocity: Vector3,
+	surface_normal: Vector3,
+	contact_position: Vector3
+) -> void:
 	if is_instance_valid(operator) or _bump_cooldown_remaining > 0.0:
 		return
 	var push_direction := -surface_normal
@@ -283,7 +363,8 @@ func apply_character_bump(player_velocity: Vector3, surface_normal: Vector3) -> 
 		return
 	can_sleep = true
 	sleeping = false
-	apply_central_impulse(push_direction * impulse_strength)
+	_pending_bump_impulse += push_direction * impulse_strength
+	_pending_bump_offset = contact_position - global_position
 	_bump_cooldown_remaining = bump_cooldown
 
 
@@ -294,10 +375,18 @@ func _stick_holdables_to_pad() -> void:
 		var item := overlapping_body as HoldableObject
 		if item.is_held or item.is_stuck:
 			continue
+		if item.is_in_group("training_patient"):
+			if item.has_method("can_load_onto") and bool(item.call("can_load_onto", self)):
+				item.call("load_onto_stretcher", self)
+			continue
 
 		var local_center := to_local(item.global_position)
 		var local_yaw := wrapf(item.global_rotation.y - global_rotation.y, -PI, PI)
-		var resting_center_y := PAD_TOP_LOCAL_Y + item.pad_resting_height * 0.5
+		var resting_center_y := (
+			get_pad_top_local_y()
+			+ item.pad_resting_height * 0.5
+			+ item.pad_resting_offset_y
+		)
 
 		var local_transform := Transform3D(
 			Basis(Vector3.UP, local_yaw),
@@ -314,6 +403,12 @@ func _physics_process(delta: float) -> void:
 		operator = null
 		operator_input = Vector2.ZERO
 		return
+	if is_instance_valid(_height_tween) and _height_tween.is_running():
+		operator_input = Vector2.ZERO
+		linear_velocity.x = 0.0
+		linear_velocity.z = 0.0
+		angular_velocity.y = 0.0
+		return
 
 	var longitudinal_input := -operator_input.y
 	var lateral_input := operator_input.x
@@ -322,6 +417,10 @@ func _physics_process(delta: float) -> void:
 	var target_turn_speed := 0.0
 
 	if are_both_casters_unlocked():
+		var is_end_operator := absf(operator_offset.z) > absf(operator_offset.x)
+		if is_end_operator:
+			target_turn_speed = signf(operator_offset.z) * desired_local.x * maximum_turn_speed
+			desired_local.x *= 0.5
 		var world_direction := global_basis * desired_local
 		target_horizontal_velocity = world_direction * maximum_speed
 		_steer_free_casters(_front_casters, desired_local, delta)
@@ -366,6 +465,10 @@ func _physics_process(delta: float) -> void:
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	if _pending_bump_impulse.length_squared() > 0.0:
+		state.apply_impulse(_pending_bump_impulse, _pending_bump_offset)
+		_pending_bump_impulse = Vector3.ZERO
+		_pending_bump_offset = Vector3.ZERO
 	if are_both_casters_unlocked():
 		return
 

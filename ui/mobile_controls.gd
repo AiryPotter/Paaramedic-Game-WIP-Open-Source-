@@ -17,6 +17,7 @@ var status_panel: PanelContainer
 var status_label: Label
 var toss_button: Button
 var push_button: Button
+var height_button: Button
 var front_lock_button: Button
 var rear_lock_button: Button
 var joystick_touch_id: int = -1
@@ -35,6 +36,7 @@ func _ready() -> void:
 	_build_toss_button()
 	_build_lock_buttons()
 	_build_push_button()
+	_build_height_button()
 	_last_stretcher_grabbed = bool(interactor.call("is_stretcher_grabbed"))
 	resized.connect(_reset_touch_state)
 	queue_redraw()
@@ -59,6 +61,9 @@ func _process(_delta: float) -> void:
 	push_button.visible = stretcher_grabbed
 	push_button.text = str(interactor.call("get_push_label"))
 	push_button.disabled = not bool(interactor.call("can_push_stretcher"))
+	height_button.visible = stretcher_grabbed
+	height_button.text = str(interactor.call("get_stretcher_height_label"))
+	height_button.disabled = not bool(interactor.call("can_change_stretcher_height"))
 	if look_touch_id != -1 and bool(interactor.call("look_control_moves")):
 		player.set_look_movement_input(look_offset / JOYSTICK_RADIUS)
 	else:
@@ -120,6 +125,8 @@ func _touch_hits_control(touch_position: Vector2) -> bool:
 		return true
 	if push_button.visible and push_button.get_global_rect().has_point(touch_position):
 		return true
+	if height_button.visible and height_button.get_global_rect().has_point(touch_position):
+		return true
 	return false
 
 
@@ -175,7 +182,7 @@ func _build_interaction_button() -> void:
 	interaction_button = Button.new()
 	interaction_button.name = "InteractionButton"
 	interaction_button.text = "INTERACT"
-	interaction_button.tooltip_text = "Aim at a patient to assess or an item to pick it up."
+	interaction_button.tooltip_text = "Aim at the patient to assess or pick up the mannequin; use TOSS to throw a held item."
 	interaction_button.focus_mode = Control.FOCUS_NONE
 	interaction_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	interaction_button.anchor_left = 0.5
@@ -242,7 +249,7 @@ func _build_toss_button() -> void:
 	toss_button = Button.new()
 	toss_button.name = "TossButton"
 	toss_button.text = "TOSS"
-	toss_button.tooltip_text = "Give the carried item a short underhand toss."
+	toss_button.tooltip_text = "Toss the held item toward the crosshair; a lowered stretcher catches the mannequin over a generous deck area."
 	toss_button.visible = false
 	toss_button.focus_mode = Control.FOCUS_NONE
 	toss_button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -296,6 +303,38 @@ func _build_push_button() -> void:
 
 func _on_push_pressed() -> void:
 	interactor.call("request_push")
+
+
+func _build_height_button() -> void:
+	height_button = Button.new()
+	height_button.name = "StretcherHeightButton"
+	height_button.text = "LOWER"
+	height_button.tooltip_text = "Lower the stretcher for patient loading, or raise it for transport."
+	height_button.visible = false
+	height_button.focus_mode = Control.FOCUS_NONE
+	height_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	height_button.anchor_left = 0.5
+	height_button.anchor_right = 0.5
+	height_button.anchor_top = 1.0
+	height_button.anchor_bottom = 1.0
+	height_button.offset_left = -110.0
+	height_button.offset_right = 110.0
+	height_button.offset_top = -438.0
+	height_button.offset_bottom = -374.0
+	height_button.add_theme_font_size_override("font_size", 16)
+	height_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.28, 0.22, 0.08, 0.96)
+	style.set_corner_radius_all(10)
+	style.set_border_width_all(2)
+	style.border_color = Color(1.0, 0.84, 0.48, 0.95)
+	height_button.add_theme_stylebox_override("normal", style)
+	height_button.pressed.connect(_on_height_pressed)
+	add_child(height_button)
+
+
+func _on_height_pressed() -> void:
+	interactor.call("request_height_toggle")
 
 
 func _build_lock_buttons() -> void:

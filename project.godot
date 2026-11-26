@@ -15,13 +15,40 @@ run/main_scene="res://scenes/main/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
+[editor]
+
+movie_writer/disable_vsync=true
+
+[input_devices]
+
+pointing/ios/enable_pan_and_scale_gestures=true
+sensors/enable_accelerometer=true
+sensors/enable_gravity=true
+sensors/enable_gyroscope=true
+sensors/enable_magnetometer=true
+
+[internationalization]
+
+locale/include_text_server_data=true
+
 [rendering]
 
 renderer/rendering_method="mobile"
 
 [xogot]
 
-project/editorState=[]
+project/editorState=[{
+"column": 0,
+"current": true,
+"line": 277,
+"path": "res://tests/qa_runner.gd",
+"transient": true,
+"type": "file"
+}]
 project/shaderEditorState=[]
 project/breakpoints={}
 project/disabled_breakpoints={}
+
+[xr]
+
+openxr/extensions/debug_utils=0

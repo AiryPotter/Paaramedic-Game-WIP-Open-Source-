@@ -32,6 +32,9 @@ func _is_touching_stretcher_pad(state: PhysicsDirectBodyState3D) -> bool:
 			var local_contact := (collider as Node3D).to_local(
 				state.get_contact_collider_position(contact_index)
 			)
-			if local_contact.y >= PAD_TOP_LOCAL_Y - 0.03:
+			var pad_top_local_y := PAD_TOP_LOCAL_Y
+			if (collider as Node3D).has_method("get_pad_top_local_y"):
+				pad_top_local_y = float((collider as Node3D).call("get_pad_top_local_y"))
+			if local_contact.y >= pad_top_local_y - 0.03:
 				return true
 	return false
