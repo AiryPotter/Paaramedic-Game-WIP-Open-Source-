@@ -17,6 +17,10 @@
 |---|---|
 | Depth | Describe what other games do, **and** how each feature could be built in Godot in Xogot |
 | Purpose of driving and crashes | **Both:** ambulance driving (with crashes as a result of unsafe driving), and vehicle crash scenes that the paramedic responds to |
+| Driving controls | **Joystick, like the first-person view.** Wheel-and-pedals and tilt steering are researched below as alternatives. |
+| Unsafe transport | **Loses points and is explained in the debrief.** This covers driving off with the stretcher unsecured, and harsh driving with a patient on board. |
+| Crash scenes | **The paramedic is alone on scene.** No fire crew or other responders. |
+| Trapped patients | **None yet.** Early crash scenes have patients who can be reached without extrication. Entrapment comes later. Extrication roles are researched below. |
 
 **Fit with the milestone plan:** Milestone 16 keeps driving out of the first demo. Everything on driving here is for after the demo. Loading (section 3) applies now. Crash scenes (section 4) could become a later scenario.
 
@@ -70,10 +74,26 @@ Common racing features (general knowledge, not tied to one source): a route line
 - Ambulance model: the Kenney Car Kit ambulance (CC0).
 - An ambulance is heavy and top-heavy. Use a high mass and a center of mass that is not too low, so fast turns feel risky. This is a tuning starting point, not a measured value.
 
-**Touch controls on iPad**
-- Option A: on-screen steering slider or wheel on the left, and gas and brake pedals on the right.
-- Option B: tilt steering with the gyroscope or accelerometer. Note that review 4 suggested turning those sensors off. Keep them on only if tilt steering is chosen.
-- Buttons: SIREN, LIGHTS, and a horn.
+**Touch controls on iPad (maintainer decision: joystick)**
+- Reuse the existing left joystick, so walking and driving feel the same:
+  - Left and right steer.
+  - Push forward to accelerate, and pull back to brake. Holding back after the ambulance has stopped reverses, after a short pause of about 0.3 s so braking does not turn into reversing by accident.
+  - Steering returns to center when the thumb lifts, and gas is released.
+  - At higher speed, the same stick movement steers less. This keeps the heavy ambulance stable.
+  - Use a small dead zone, as the walking joystick already has.
+- The right LOOK pad orbits the chase camera, which drifts back behind the ambulance after a moment.
+- Buttons: SIREN, LIGHTS, a horn, and PARK (parking brake) for loading.
+- Review 4 suggested turning the iPad's motion sensors off. With joystick driving they are not needed.
+
+**Steering options compared** (research for later)
+
+| Scheme | What research and players say | How in Godot |
+|---|---|---|
+| **Joystick (chosen)** | One usability study compared five touch schemes for a driving game: buttons, a steering wheel, a joystick, joystick plus buttons, and tilt. Its detailed results were not checked here. A forum player said a stick or wheel suits top-down and overhead views better. | Reuse `ui/mobile_controls.gd`'s joystick, as above. |
+| On-screen wheel and pedals | GRID Autosport on iOS offers a "Wheel Touch" mode with an on-screen steering wheel. Real Racing 3 offers automatic gas as an option. Some players dislike tilt and prefer these. | A wheel control on the left that turns with the thumb's angle around its center. Gas and brake buttons on the right that read how far down the finger is held. |
+| Tilt steering | Most mobile racing games use it by default, with buttons as a fallback. One study found tilt gave more immersion and better performance than touch in a racing game. Another found players preferred a different tilt mapping from the one they performed best with. Forum players are split: some want anything but tilt. | `Input.get_accelerometer()` or `Input.get_gravity()`, with a dead zone and smoothing. It returns zero in the editor, so test on the device. Needs the motion sensor settings left on. |
+
+The common advice from players is to offer more than one scheme. Wheel-and-pedals and tilt could be added later as options in settings.
 
 **Traffic that yields** (this is what reviewers missed in Ambulance Life and Police Simulator)
 - Traffic cars follow lanes made with `Path3D` and `PathFollow3D`. They do not need full physics until they are hit.
@@ -86,10 +106,15 @@ Common racing features (general knowledge, not tied to one source): a route line
 - At intersections, some cars react late. This teaches clearing intersections carefully.
 - The distances and delays above are starting values to tune.
 
-**Scoring ideas** (for the maintainer to approve)
+**Scoring**
 - Response time.
 - Safe-driving events: collisions, speeding through red lights without slowing, and nearly hitting pedestrians.
-- **Patient comfort while transporting:** measure hard acceleration, braking and cornering. The KOLE-style velocity-change check can measure this. Jolts could be logged for the debrief. Which jolts matter clinically is for the maintainer and clinical reviewer to decide.
+- **Patient comfort while transporting:** measure hard acceleration, braking and cornering. The KOLE-style velocity-change check can measure this. Which limits matter clinically is for the maintainer and clinical reviewer to decide.
+- **Maintainer decision: unsafe transport loses points and is explained in the debrief.** That covers:
+  - driving off with the stretcher not secured (section 3, step 5),
+  - harsh driving with a patient on board.
+
+  The debrief shows when it happened and why it matters. The exact point values come with the scoring rubric in Milestone 17.
 - Avoid Burnout's problem: any crash replay should end with the ambulance stopped or slowed, not straight back at full speed.
 
 ## 3. Loading an object onto or into another object
@@ -111,7 +136,7 @@ This uses the same pattern as the sticky pad and patient transfer. Movement is p
 2. **Alignment check:** the stretcher is inside the zone, lined up within about 15 degrees, nearly stopped, raised to loading height, and the patient is secured. Show a hint for anything missing, such as "LINE UP" or "SLOW DOWN".
 3. **Vehicle ready**, like SnowRunner: the ambulance's parking brake is on and the rear doors are open. If not, show "SET PARKING BRAKE" or "OPEN DOORS".
 4. **LOAD action:** freeze the stretcher and patient (kinematic), reparent them to the ambulance, and play a short tween or animation as it slides in.
-5. **Secure step**, like SnowRunner's confirmation: tap SECURE to lock the stretcher mount. Driving off unsecured could be logged for the debrief, if the maintainer wants.
+5. **Secure step**, like SnowRunner's confirmation: tap SECURE to lock the stretcher mount. **Driving off unsecured loses points and appears in the debrief** (maintainer decision).
 6. **Unload** at the hospital is the reverse. Moving Out's reverse mode shows unloading can be its own challenge.
 7. **Equipment inside the ambulance:** stick bags and KOLE to shelves the same way as the pad, so nothing loose rides along.
 8. **Weight and balance** (optional, like Death Stranding): when the player carries something heavy, slow walking slightly and sway the camera.
@@ -140,21 +165,36 @@ Notes on the methods:
 - **Crash detection:** reuse the KOLE pattern. Turn on contact monitoring and compare velocity before and after a contact. A large change is a crash, and its size gives the severity. Emit a signal such as `crashed(severity, contact_point)` so damage, sound, the patient's state and the event log can each react.
 
 ### Crash scenes to respond to
-- Build the scene with method B: one or two wrecked cars, traffic hazards, and possibly a trapped patient.
-- **Real-world extrication** uses hydraulic rescue tools: spreaders, shears (often called the Jaws of Life), combination spreader-shears, and rams. A rescue or squad truck carries them.
-- In the game, fire crews could do the extrication on their own, like backup in Milestone 15, while the paramedic cares for the patient. Which tasks belong to the paramedic and which to fire crews follows the maintainer's service protocols.
-- Hazards and patient care steps at a crash, such as scene safety, traffic control and spinal care, must come from the maintainer's protocols with clinical review. None is described here.
+**Maintainer decisions: the paramedic is alone on scene, and there are no trapped patients yet.**
+
+- Build the scene with method B: one or two wrecked cars and the hazards that the protocols list.
+- Every patient can be reached without cutting: through an open or unlocked door, or already out of the car.
+- Because the paramedic is alone, there is no partner for lifting. How a lone paramedic moves a patient follows the maintainer's protocols. This affects the stretcher and stair chair work in Milestones 11 and 12, which assumed a partner.
+- Hazards and patient care steps at a crash, such as scene safety, traffic and spinal care, must come from the maintainer's protocols with clinical review. None is described here.
+
+### Extrication roles (research for later, when trapped patients are added)
+**Real-world extrication** uses hydraulic rescue tools: spreaders, shears (often called the Jaws of Life), combination spreader-shears, and rams. Crews often remove windows, cut the roof posts and sometimes lift the roof off. One 2016 crash needed seven tools at once: two cutters, a spreader and four rams. A rescue or squad truck carries them.
+
+| Option | What it looks like | Notes |
+|---|---|---|
+| Fire crews do it on their own | Fire crews arrive and cut the patient free while the paramedic gives care. Same pattern as Milestone 15 backup. | The Emergency series of strategy games is known for this split of fire crews freeing people and medics treating them. That is general knowledge; game details were not found in these searches. Simplest to build. |
+| Paramedic directs it | The paramedic tells the fire crew where and when to cut, based on the patient's needs. | Tests leadership and communication. Needs a command menu and more crew behaviors. |
+| Paramedic does it | The paramedic uses the tools themselves. | Some EMS systems train paramedics in this. In Pittsburgh, every paramedic must pass a Basic Vehicle Rescue course that covers cutting and spreading tools. Fits the "paramedic alone" decision, but adds tool use, car parts that can be cut, and a lot of safety rules. |
+
+No game-specific details about extrication were found in Firefighting Simulator: The Squad or Emergency 4 during these searches.
 
 ### Crashes as a result of the ambulance's driving
 - A crash (method A) adds a delay, damages the ambulance, and is logged for the debrief.
 - If the patient is on board, a severe crash could change the patient's condition, using scenario data from approved protocols.
 - Keep it consequence-focused, not spectacle: no Burnout-style slow-motion replays.
 
-## Questions for the maintainer
+## Questions for the maintainer (all answered)
 
-1. Driving controls: on-screen wheel and pedals, or tilt steering?
-2. Should driving off with the stretcher unsecured, or harsh driving with a patient on board, cost points or only appear in the debrief?
-3. For crash scenes: is extrication done by fire crews automatically, or does the paramedic take part?
+1. Driving controls: joystick, like the first-person view. Wheel-and-pedals and tilt are researched as later options.
+2. Unsafe transport: loses points and is explained in the debrief.
+3. Crash scenes: the paramedic is alone on scene, with no trapped patients yet. Extrication roles are researched for later.
+
+**New follow-up:** the stretcher and stair chair plans assumed a partner. With the paramedic alone at crash scenes, should the partner also be removed from house calls, or only from crash scenes?
 
 ## Sources
 
@@ -165,5 +205,6 @@ Notes on the methods:
 - Burnout: [GameSpot review](https://gamespot.com/reviews/burnout-3-takedown-review/1900-6106835/), [GameSpot preview](https://gamespot.com/articles/burnout-3-takedown-feature-preview/1100-6104473/), [GameSpot user review](https://www.gamespot.com/burnout-3-takedown/user-reviews/2200-535143/), [Burnout series](https://Www.wikipedia.org/wiki/Burnout_(series))
 - Loading: [Moving Out (Wikipedia)](https://en.wikipedia.org/wiki/Moving_Out_(video_game)), [Game Informer review](https://www.gameinformer.com/review/moving-out/moving-out-review-packed-with-frustration), [Shacknews tips](https://shacknews.com/article/117802/moving-out-5-helpful-tips-for-beginners?amphtml=1), [SnowRunner crane guide](https://www.gamepressure.com/snowrunner/crane/zbd502), [SnowRunner loading feedback](https://community.focus-entmt.com/focus-entertainment/snow-runner/ideas/8061-manual-loading-and-unloading-cargo-is-not-as-good-as-it-could-be), [Death Stranding balance](https://www.powerpyx.com/death-stranding-how-to-balance-cargo), [Roblox forum: objects in moving vehicles](https://devforum.roblox.com/t/objects-in-moving-vehicle-being-glitchy/2315508), [Unreal forum: physics objects in a cart](https://forums.unrealengine.com/t/physics-objects-inside-a-physics-container-shopping-cart/2606280/4)
 - Crash physics: [BeamNG physics](https://beamng.com/game/about/physics), [JBeam physics theory](https://wiki.beamng.com/JBeam_Physics_Theory), [Yahoo Autos on BeamNG realism](https://autos.yahoo.com/no-those-viral-beamng-crash-200000996.html), [Steam discussion comparing Wreckfest](https://steamcommunity.com/app/228380/discussions/0/3559414588254146916), [Overtake.gg on soft-body physics](https://overtake.gg/news/comments/92223)
-- Extrication: [Hydraulic rescue tool](https://Www.Wikipedia.org/wiki/Hurst_Tool), [Squad truck](https://en.wikipedia.org/wiki/Squad_truck), [Vehicle extrication](https://Www.Wikipedia.org/wiki/Vehicle_extrication)
+- Extrication: [Hydraulic rescue tool](https://Www.Wikipedia.org/wiki/Hurst_Tool), [Squad truck](https://en.wikipedia.org/wiki/Squad_truck), [Vehicle extrication](https://Www.Wikipedia.org/wiki/Vehicle_extrication), [Fire Engineering: one tough extrication](https://www.fireengineering.com/technical-rescue/one-tough-extrication/), [Fire Engineering: rush-hour technical rescue](https://www.fireengineering.com/technical-rescue/a-technical-rescue-in-rush-hour-traffic/), [Firefighting Simulator: The Squad](https://www.playstation.com/en-au/games/firefighting-simulator-the-squad/)
+- Steering: [Tilt or Touch (study)](https://www.researchgate.net/profile/Muhammad-Suhaib-6/publication/328127724_Tilt_or_Touch_An_Evaluation_of_Steering_Control_of_Racing_Game_on_Tablet_or_Smartphone/links/5bd95e1492851c6b279b9df9/Tilt-or-Touch-An-Evaluation-of-Steering-Control-of-Racing-Game-on-Tablet-or-Smartphone.pdf), [Rocha et al. 2019, five control schemes](https://estudogeral.sib.uc.pt/bitstream/10316/87771/1/Rocha%20et%20al.%20-%202019%20-%20Mapping%20Controls%20on%20a%202D%20User%20Drawn%20Racetracks%20Driving%20Game%20%e2%80%93%20An%20Usability%20Assessment.pdf), [York University tilt study](https://www.yorku.ca/mack/ie2014.html), [Droid Gamers poll](https://www.droidgamers.com/news/poll-do-you-prefer-using-tilt-to-steer-or-on-screen-navigation-buttons-for-racing-titles/), [TouchArcade forum](https://toucharcade.com/community/threads/how-do-you-prefer-to-steer-in-a-car-game.173404/), [GRID Autosport iOS controls](https://support.feralinteractive.com/en/mac-linux-games/gridautosport/faqs/ios_control_methods), [Godot controller features](https://docs.godotengine.org/en/stable/tutorials/inputs/controller_features.html), [Godot Input class](https://docs.godotengine.org/en/4.2/classes/class_input.html)
 - Vehicle code: [Godot demo projects](https://github.com/godotengine/godot-demo-projects), [Kenney Starter Kit Racing](https://github.com/KenneyNL/Starter-Kit-Racing), [GDCustomRaycastVehicle](https://github.com/Tobalation/GDCustomRaycastVehicle), [Seerban/godot-vehicle](https://github.com/Seerban/godot-vehicle), [Kenney Car Kit](https://www.kenney.nl/assets/car-kit)
