@@ -27,7 +27,7 @@ A complete, replayable call should include:
 
 ## Current prototype
 
-The project already has touch movement/look, pickup and toss interactions, two paramedic bags, KOLE, and a 2.20 m stretcher with caster locks and a full-deck sticky pad. The current training patient is a non-graphic interaction and loading placeholder. It contains no symptoms, vital signs, diagnosis, or treatment rules. The stretcher can lower its deck, accept the patient when aligned, then raise for transport. The PUSH button and recent physics/input reliability changes still need device testing.
+The project already has touch movement/look, pickup and toss interactions for equipment, two paramedic bags, KOLE, and a 2.20 m stretcher with caster locks and a sticky pad. The training mannequin is a non-graphic placeholder with no symptoms, vital signs, diagnosis, or treatment rules. After assessment, it transfers to a lowered, stopped, aligned stretcher through a short interaction animation; patient pickup and tossing are intentionally unavailable. The developer confirms stretcher maneuvering and sticky bag overhang feel good. A neutral equipment-transport mission and parked ambulance loading are in progress and still need runtime and device testing.
 
 ## Roadmap
 
@@ -35,7 +35,7 @@ The project already has touch movement/look, pickup and toss interactions, two p
 
 Current prototype work: recover stale touch IDs, keep stuck equipment aligned with the stretcher, preserve impacts under caster constraints, add a deliberate PUSH action, and establish a patient interaction placeholder. Validate these behaviors on iPad before relying on them in later scenarios.
 
-### Milestone 10 — Game structure
+### Milestone 10 — Game structure (in progress)
 
 Add a simple main menu, pause/restart flow, and settings. Introduce a small `GameState`/event log and a scenario resource that names the location, objectives, patient case, hazards, and scoring criteria. Keep the state machine and event flow custom and small until the demo needs more; do not add third-party code without explicit approval and license review.
 
@@ -59,9 +59,9 @@ Build assessment interactions, a compact findings display, and a scenario-driven
 
 Add an in-game radio request and clear arrival feedback. Scenario-defined backup can include ACP, CCP, police for violent scenes, and online medical control by radio/phone. Backup acts on its own after arrival; the doctor gives a time of death by phone/radio when the approved scenario requires it. Unneeded backup costs no points but is mentioned in the debrief. Exact timing, actions, and clinical logic come from approved scenario data.
 
-### Milestone 16 — Ambulance loading and hospital handover
+### Milestone 16 — Ambulance loading and hospital handover (early work in progress)
 
-Add a parked ambulance, an alignment-checked LOAD action, and a short loading animation. Fade to a simple hospital bay and let the player wheel the patient to a bed. Use **MIST** for the touch-friendly verbal handover: Mechanism/Medical complaint, Injuries/Illness, Signs, Treatment. Score accuracy against the scenario and event log. Driving remains deferred.
+Add a parked ambulance, an alignment-checked LOAD action, and a short loading animation. Fade to a simple hospital bay and let the player wheel the patient to a bed. Use **MIST** for the touch-friendly verbal handover: Mechanism/Medical complaint, Injuries/Illness, Signs, Treatment. Score accuracy against the scenario and event log. Driving remains deferred. The current early slice covers only the parked vehicle and stretcher loading; hospital handover awaits approved scenario content.
 
 ### Milestone 17 — Scenario, scoring, and debrief
 

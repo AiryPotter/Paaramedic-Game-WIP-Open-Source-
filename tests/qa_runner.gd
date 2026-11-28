@@ -13,6 +13,7 @@ var _stretcher: RigidBody3D
 var _patient: RigidBody3D
 var _bag: RigidBody3D
 var _kole: RigidBody3D
+var _ambulance: Node3D
 var _interactor: Node
 var _mobile_controls: Control
 var _camera: Camera3D
@@ -130,6 +131,7 @@ func _run_suite() -> void:
 		and is_instance_valid(_patient)
 		and is_instance_valid(_bag)
 		and is_instance_valid(_kole)
+		and is_instance_valid(_ambulance)
 		and is_instance_valid(_interactor)
 		and is_instance_valid(_mobile_controls)
 		and is_instance_valid(_camera)
@@ -137,7 +139,7 @@ func _run_suite() -> void:
 	_record(
 		"Main-scene setup",
 		required_nodes_ok,
-		"Player, camera, interactor, controls, stretcher, patient, bags, and KOLE are present."
+		"Player, camera, interactor, controls, stretcher, patient, ambulance, bags, and KOLE are present."
 	)
 	if not required_nodes_ok:
 		await _finish_suite()
@@ -145,12 +147,15 @@ func _run_suite() -> void:
 
 	_mobile_controls.set_process_input(false)
 	_test_camera_and_world()
+	_test_joystick_layout_controls()
+	_test_stretcher_collision_structure()
 	await _test_patient_ray_target()
 	_test_touch_id_reuse()
 	await _test_kole_impacts()
 	await _test_stretcher_patient_and_pad()
 	await _test_bumps_with_caster_locks()
 	await _test_push_button()
+	await _test_ambulance_loading()
 
 	_results.append("MANUAL: Real multitouch, app-switch recovery, visual feel, and Xogot-level black-screen behavior still need an iPad check.")
 	await _finish_suite()
@@ -162,6 +167,7 @@ func _resolve_main_nodes() -> void:
 	_patient = _main.get_node_or_null("TrainingPatient") as RigidBody3D
 	_bag = _main.get_node_or_null("PrimaryBag") as RigidBody3D
 	_kole = _main.get_node_or_null("KOLEDefibrillator") as RigidBody3D
+	_ambulance = _main.get_node_or_null("Ambulance") as Node3D
 	if is_instance_valid(_player):
 		_interactor = _player.get_node_or_null("Interactor")
 		_camera = _player.get_node_or_null("Camera3D") as Camera3D
@@ -175,6 +181,94 @@ func _test_camera_and_world() -> void:
 		_camera.current and environment_node != null and environment_node.environment != null,
 		"Checks engine setup; it cannot detect an Xogot host-rendering failure."
 	)
+
+
+func _test_joystick_layout_controls() -> void:
+	var layout_editor := _mobile_controls.get_node_or_null("PauseMenu/ControlLayoutEditor") as Control
+	var move_center: Vector2 = _mobile_controls.call("_joystick_center")
+	var look_center: Vector2 = _mobile_controls.call("_look_joystick_center")
+	var expected_move_center := GameState.move_joystick_position * _mobile_controls.size
+	var expected_look_center := GameState.look_joystick_position * _mobile_controls.size
+	_record(
+		"Touch sticks use saved adjustable positions",
+		move_center.is_equal_approx(expected_move_center)
+			and look_center.is_equal_approx(expected_look_center)
+			and move_center.x < _mobile_controls.size.x * 0.5
+			and look_center.x > _mobile_controls.size.x * 0.5,
+		"The move stick remains left and the look stick right."
+	)
+	_record(
+		"Settings include the touch-layout editor",
+		layout_editor != null and layout_editor.has_method("begin_edit") and not layout_editor.visible,
+		""
+	)
+	if layout_editor == null or not layout_editor.has_method("begin_edit"):
+		_record("Touch editor has visible save and resume actions", false, "Editor or its begin_edit method is missing.")
+		return
+
+	layout_editor.call("begin_edit", true)
+	var save_button := layout_editor.get_node_or_null("Actions/SaveActions/SaveButton") as Button
+	var save_resume_button := layout_editor.get_node_or_null("Actions/SaveActions/SaveResumeButton") as Button
+	var save_and_resume_available := (
+		layout_editor.visible
+		and is_instance_valid(save_button)
+		and save_button.visible
+		and is_instance_valid(save_resume_button)
+		and save_resume_button.visible
+	)
+	layout_editor.call("begin_edit", false)
+	var main_menu_save_available := (
+		layout_editor.visible
+		and is_instance_valid(save_button)
+		and save_button.visible
+		and is_instance_valid(save_resume_button)
+		and not save_resume_button.visible
+	)
+	layout_editor.visible = false
+	_record(
+		"Touch editor has visible save and resume actions",
+		save_and_resume_available and main_menu_save_available,
+		"Pause settings expose SAVE & RESUME; the main menu retains SAVE."
+	)
+
+
+func _test_stretcher_collision_structure() -> void:
+	_record(
+		"Interaction reaches match approved values",
+		is_equal_approx(float(_interactor.get("stretcher_interaction_distance")), 5.5)
+			and is_equal_approx(float(_interactor.get("bag_interaction_distance")), 2.8),
+		"Stretcher 5.5 m; equipment/patient 2.8 m."
+	)
+	var collision_shapes: Array[CollisionShape3D] = []
+	_collect_collision_shapes(_stretcher, collision_shapes)
+	var direct_parents_valid := not collision_shapes.is_empty()
+	for shape in collision_shapes:
+		if not (shape.get_parent() is CollisionObject3D):
+			direct_parents_valid = false
+	_record(
+		"Stretcher collision shapes are direct children of collision bodies",
+		direct_parents_valid,
+		"Found %d collision shapes." % collision_shapes.size()
+	)
+
+	var ray_from := _stretcher.to_global(Vector3(0.0, 1.15, 0.0))
+	var ray_to := _stretcher.to_global(Vector3(0.0, 0.5, 0.0))
+	var query := PhysicsRayQueryParameters3D.create(
+		ray_from, ray_to, _stretcher.collision_layer, [_player.get_rid()]
+	)
+	var hit := _stretcher.get_world_3d().direct_space_state.intersect_ray(query)
+	_record(
+		"Deck collider blocks a ray through its center",
+		hit.get("collider") == _stretcher,
+		"A ray through the deck must hit the stretcher body."
+	)
+
+
+func _collect_collision_shapes(node: Node, output: Array[CollisionShape3D]) -> void:
+	for child in node.get_children():
+		if child is CollisionShape3D:
+			output.append(child as CollisionShape3D)
+		_collect_collision_shapes(child, output)
 
 
 func _test_patient_ray_target() -> void:
@@ -209,11 +303,11 @@ func _test_patient_ray_target() -> void:
 	_patient.call("assess_patient")
 	await get_tree().process_frame
 	_record(
-		"Assessment changes action to PICK UP PATIENT",
+		"Assessment prompts the user to lower the stretcher",
 		interaction_button != null
-			and str(_interactor.call("get_action_label")) == "PICK UP PATIENT"
-			and interaction_button.text == "PICK UP PATIENT",
-		""
+			and str(_interactor.call("get_action_label")) == "LOWER STRETCHER"
+			and interaction_button.text == "LOWER STRETCHER",
+		"Patient pickup and toss are intentionally unavailable."
 	)
 	_patient.set("assessment_started", false)
 	_player.global_transform = saved_player_transform
@@ -392,7 +486,19 @@ func _test_stretcher_patient_and_pad() -> void:
 	_bag.freeze = true
 	_bag.linear_velocity = Vector3.ZERO
 	_bag.angular_velocity = Vector3.ZERO
-	_bag.global_position = _stretcher.to_global(Vector3(0.8, 1.2, -0.5))
+	_bag.global_position = _stretcher.to_global(Vector3(0.0, 1.3, 0.0))
+	await _wait_physics_frames(8)
+	_record(
+		"Pad sensor does not catch equipment above the deck",
+		not bool(_bag.get("is_stuck")),
+		"The pad should secure equipment only on physical contact."
+	)
+	var bag_center_y := (
+		float(_stretcher.call("get_pad_top_local_y"))
+		+ float(_bag.get("pad_resting_height")) * 0.5
+		+ float(_bag.get("pad_resting_offset_y"))
+	)
+	_bag.global_position = _stretcher.to_global(Vector3(0.8, bag_center_y, -0.5))
 	await _wait_physics_frames(8)
 	var bag_stuck := bool(_bag.get("is_stuck")) and _bag.get("stuck_to") == _stretcher
 	var bag_local_position := _stretcher.to_local(_bag.global_position)
@@ -402,14 +508,18 @@ func _test_stretcher_patient_and_pad() -> void:
 		"Uses a real physics overlap near the pad edge."
 	)
 	var bag_y_before_lower := bag_local_position.y
+	var side_rail := _stretcher.get_node("SideRailLeft") as Node3D
+	var crossbar := _stretcher.get_node("CrossbarFront") as Node3D
+	var side_rail_frame_position := side_rail.position
+	var crossbar_frame_position := crossbar.position
 
 	_patient.global_position = _stretcher.to_global(Vector3(1.2, 0.0, 0.0))
-	var patient_not_assessed := not bool(_patient.call("can_load_onto", _stretcher))
+	var patient_requires_assessment := str(_patient.call("get_transfer_hint", _stretcher)) == "ASSESS PATIENT"
 	_patient.call("assess_patient")
-	var patient_cannot_load_high := not bool(_patient.call("can_load_onto", _stretcher))
+	var patient_requires_lowering := str(_patient.call("get_transfer_hint", _stretcher)) == "LOWER STRETCHER"
 	_record(
-		"Patient load is gated by assessment and low deck",
-		patient_not_assessed and patient_cannot_load_high,
+		"Transfer is gated by assessment and lowered deck",
+		patient_requires_assessment and patient_requires_lowering,
 		"The placeholder assessment contains no clinical data."
 	)
 
@@ -443,6 +553,19 @@ func _test_stretcher_patient_and_pad() -> void:
 		lowered and absf(pad_top - 0.6) < 0.02,
 		"Expected deck/pad top near 0.60 m."
 	)
+	_record(
+		"Stretcher frame remains locked while deck lowers",
+		(side_rail.position - side_rail_frame_position).length() < 0.001
+			and (crossbar.position - crossbar_frame_position).length() < 0.001,
+		"Only the deck assembly should move during height adjustment."
+	)
+	_record(
+		"Lowered stretcher is locked until raised",
+		lowered
+			and bool(_stretcher.get("freeze"))
+			and not bool(_stretcher.call("can_push_from_operator", _player)),
+		""
+	)
 
 	if bag_stuck:
 		var bag_y_lowered := _stretcher.to_local(_bag.global_position).y
@@ -454,65 +577,113 @@ func _test_stretcher_patient_and_pad() -> void:
 	else:
 		_record("Secured bag follows deck lowering", false, "Skipped because the pad did not secure the bag.")
 
-	var patient_can_load := bool(_patient.call("can_load_onto", _stretcher))
+	_patient.global_rotation = _stretcher.global_rotation
+	_patient.global_position = _stretcher.to_global(Vector3(3.9, 0.0, 0.0))
+	var side_clearance_hint := str(_patient.call("get_transfer_hint", _stretcher))
 	_record(
-		"Assessment and lowered deck permit patient loading",
-		lowered and patient_can_load,
-		""
+		"TRANSFER permits 3.9 m side clearance",
+		lowered and side_clearance_hint == "TRANSFER PATIENT",
+		side_clearance_hint
 	)
-	var hold_point := _player.get_node_or_null("Camera3D/HoldPoint") as Node3D
-	var patient_picked_up := false
-	if patient_can_load and hold_point != null:
-		_patient.call("pick_up", hold_point.global_transform)
-		patient_picked_up = bool(_patient.get("is_held"))
-		if patient_picked_up:
-			_interactor.set("held_object", _patient)
-	_record("Assessed patient can be physically picked up", patient_picked_up, "")
-	var held_patient_rejected := patient_picked_up and not bool(_patient.call("can_load_onto", _stretcher))
-	_record("Held patient cannot secure until released", held_patient_rejected, "")
-	await get_tree().process_frame
-	var toss_button := _mobile_controls.get_node_or_null("TossButton") as Button
-	var toss_button_ready := patient_picked_up and toss_button != null and toss_button.visible
-	_record("TOSS control appears for held patient", toss_button_ready, "")
-	if toss_button_ready:
-		toss_button.emit_signal("pressed")
-		await _wait_for_property_bool(_patient, "is_held", false, 5)
-	var toss_released_patient := (
-		toss_button_ready
-		and not bool(_patient.get("is_held"))
-		and not bool(_interactor.call("has_held_object"))
+	_patient.global_position = _stretcher.to_global(Vector3(4.1, 0.0, 0.0))
+	var side_unaligned_hint := str(_patient.call("get_transfer_hint", _stretcher))
+	_record(
+		"TRANSFER prompts to line up beyond 4.0 m sideways",
+		lowered and side_unaligned_hint == "LINE UP STRETCHER",
+		side_unaligned_hint
 	)
-	_record("TOSS releases patient into physics", toss_released_patient, "")
-	if patient_picked_up:
-		var toss_transform := _stretcher.global_transform * Transform3D(
-			Basis.IDENTITY, Vector3(0.8, 1.0, 0.8)
+	_patient.global_position = _stretcher.to_global(Vector3(0.0, 0.0, 0.9))
+	var length_clearance_hint := str(_patient.call("get_transfer_hint", _stretcher))
+	_record(
+		"TRANSFER permits 0.9 m length clearance",
+		lowered and length_clearance_hint == "TRANSFER PATIENT",
+		length_clearance_hint
+	)
+	_patient.global_position = _stretcher.to_global(Vector3(0.0, 0.0, 1.1))
+	var length_unaligned_hint := str(_patient.call("get_transfer_hint", _stretcher))
+	_record(
+		"TRANSFER prompts to line up beyond 1.0 m lengthwise",
+		lowered and length_unaligned_hint == "LINE UP STRETCHER",
+		length_unaligned_hint
+	)
+	_patient.global_position = _stretcher.to_global(Vector3(1.0, 0.0, 0.0))
+	var aligned_hint := str(_patient.call("get_transfer_hint", _stretcher))
+	_record(
+		"Aligned lowered stretcher permits TRANSFER",
+		lowered and aligned_hint == "TRANSFER PATIENT",
+		aligned_hint
+	)
+	_record(
+		"Patient is not a pickup or toss item",
+		not (_patient is HoldableObject) and not _patient.is_in_group("pickupable"),
+		"Patient movement uses the controlled TRANSFER interaction."
+	)
+	var stretcher_mass_before_transfer := _stretcher.mass
+	_stretcher.call("release", _player)
+	_interactor.set("grabbed_stretcher", null)
+	await _wait_for_property_bool(_player, "_camera_transitioning", false, MAX_TRANSITION_FRAMES)
+	_player.global_position = _patient.global_position + Vector3(0.0, 0.0, 1.8)
+	_player.velocity = Vector3.ZERO
+	_camera.look_at(_patient.global_position + Vector3(0.0, 0.3, 0.0), Vector3.UP)
+	await get_tree().physics_frame
+	_interactor.call("_refresh_aim_target")
+	var aimed_transfer_patient := _interactor.call("_get_aimed_patient") == _patient
+	var transfer_action := str(_interactor.call("get_action_label"))
+	var interaction_button := _mobile_controls.get_node_or_null("InteractionButton") as Button
+	_record(
+		"Aimed patient offers TRANSFER",
+		aimed_transfer_patient and transfer_action == "TRANSFER PATIENT",
+		transfer_action
+	)
+	if interaction_button != null:
+		interaction_button.emit_signal("pressed")
+	else:
+		_interactor.call("request_interaction")
+	var transfer_started := await _wait_for_property_bool(
+		_patient, "is_loading_to_stretcher", true, MAX_TRANSITION_FRAMES
+	)
+	var transfer_finished := false
+	if transfer_started:
+		transfer_finished = await _wait_for_property_bool(
+			_patient, "is_loading_to_stretcher", false, MAX_TRANSITION_FRAMES
 		)
-		if bool(_patient.get("is_held")):
-			_patient.call("release", toss_transform, Vector3.ZERO)
-			_interactor.set("held_object", null)
-		_patient.global_transform = toss_transform
-		_patient.linear_velocity = Vector3(0.0, 0.0, -1.5)
-		_patient.angular_velocity = Vector3.ZERO
-	await _wait_physics_frames(40)
+	await get_tree().process_frame
 	var deck := _stretcher.get_node_or_null("DeckAssembly") as Node3D
-	var patient_loaded := (
-		patient_picked_up
+	var patient_transferred := (
+		transfer_started
+		and transfer_finished
 		and bool(_patient.get("is_loaded"))
 		and deck != null
 		and _patient.get_parent() == deck
 	)
 	_record(
-		"Off-center toss is caught and snapped onto deck",
-		patient_loaded,
-		"Landing at local offset x=0.8, z=0.8 checks a forgiving catch area."
+		"TRANSFER animates mannequin onto deck",
+		patient_transferred,
+		"The mannequin moves only after the stretcher is lowered, stopped, and aligned."
+	)
+	_record(
+		"Transferred patient mass is included in stretcher",
+		is_equal_approx(_stretcher.mass, stretcher_mass_before_transfer + _patient.mass),
+		""
+	)
+	var toss_button := _mobile_controls.get_node_or_null("TossButton") as Button
+	_record(
+		"TOSS stays hidden for mannequin transfer",
+		toss_button != null and not toss_button.visible,
+		"TOSS remains available for equipment only."
 	)
 	var status_label := _mobile_controls.get_node_or_null("StatusPanel/StatusText") as Label
 	_record(
-		"Mobile status reports loaded state",
-		status_label != null and status_label.text.contains("PATIENT LOADED"),
+		"Mobile status reports secured mannequin",
+		status_label != null and status_label.text.to_upper().contains("MANNEQUIN SECURED"),
 		""
 	)
 	var patient_y_before_raise := _patient.global_position.y
+	var hold_point := _player.get_node_or_null("Camera3D/HoldPoint") as Node3D
+	var regrab_for_raise := bool(_stretcher.call("grab", _player))
+	if regrab_for_raise:
+		_interactor.set("grabbed_stretcher", _stretcher)
+	await _wait_for_property_bool(_player, "_camera_transitioning", false, MAX_TRANSITION_FRAMES)
 
 	await get_tree().process_frame
 	height_button = _mobile_controls.get_node_or_null("StretcherHeightButton") as Button
@@ -526,8 +697,11 @@ func _test_stretcher_patient_and_pad() -> void:
 	)
 	var patient_y_after_raise := _patient.global_position.y
 	_record(
-		"RAISE carries loaded patient",
-		raised and patient_loaded and absf((patient_y_after_raise - patient_y_before_raise) - 0.22) < 0.04,
+		"RAISE carries transferred patient",
+		raised
+			and patient_transferred
+			and regrab_for_raise
+			and absf((patient_y_after_raise - patient_y_before_raise) - 0.22) < 0.04,
 		""
 	)
 	if bag_stuck:
@@ -568,6 +742,39 @@ func _test_stretcher_patient_and_pad() -> void:
 	_stretcher.call("release", _player)
 	_interactor.set("grabbed_stretcher", null)
 	await _wait_for_property_bool(_player, "_camera_transitioning", false, MAX_TRANSITION_FRAMES)
+
+
+func _test_ambulance_loading() -> void:
+	_stretcher.linear_velocity = Vector3.ZERO
+	_stretcher.angular_velocity = Vector3.ZERO
+	var load_position := _ambulance.to_global(Vector3(0.0, 0.0, 3.4))
+	_stretcher.global_transform = Transform3D(_ambulance.global_basis, load_position)
+	await _wait_physics_frames(2)
+	_stretcher.linear_velocity = Vector3.ZERO
+	_stretcher.angular_velocity = Vector3.ZERO
+	_interactor.set("grabbed_stretcher", _stretcher)
+	var load_action := str(_interactor.call("get_action_label"))
+	_record("Aligned raised stretcher offers LOAD", load_action == "LOAD STRETCHER", load_action)
+	var interaction_button := _mobile_controls.get_node_or_null("InteractionButton") as Button
+	if interaction_button != null:
+		interaction_button.emit_signal("pressed")
+	else:
+		_interactor.call("request_interaction")
+	var loaded := await _wait_for_property_bool(
+		_stretcher, "is_loaded_in_ambulance", true, MAX_TRANSITION_FRAMES
+	)
+	await get_tree().process_frame
+	_record(
+		"LOAD animates stretcher into ambulance",
+		loaded and _stretcher.get_parent() == _ambulance,
+		""
+	)
+	var status_label := _mobile_controls.get_node_or_null("StatusPanel/StatusText") as Label
+	_record(
+		"Mission completes after ambulance loading",
+		status_label != null and status_label.text.contains("Mission complete"),
+		""
+	)
 
 
 func _test_bumps_with_caster_locks() -> void:

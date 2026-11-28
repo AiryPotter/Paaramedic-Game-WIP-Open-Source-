@@ -1,31 +1,32 @@
-[gd_scene load_steps=21 format=3 uid="uid://bl1m6lkwlffoi"]
+[gd_scene format=3 uid="uid://bl1m6lkwlffoi"]
 
 [ext_resource type="Script" uid="uid://bdagxbsb8gt" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://b3jawsy5my7sg" path="res://ui/mobile_controls.gd" id="2_mobile_controls"]
 [ext_resource type="PackedScene" path="res://scenes/equipment/primary_bag.tscn" id="3_primary_bag"]
+[ext_resource type="Script" uid="uid://r5onmwek5yda" path="res://scripts/interaction/pickup_interactor.gd" id="4_pickup_interactor"]
 [ext_resource type="PackedScene" path="res://scenes/equipment/secondary_bag.tscn" id="5_secondary_bag"]
-[ext_resource type="Script" path="res://scripts/interaction/pickup_interactor.gd" id="4_pickup_interactor"]
 [ext_resource type="PackedScene" path="res://scenes/stretcher/stretcher.tscn" id="6_stretcher"]
 [ext_resource type="PackedScene" path="res://scenes/equipment/defibrillator.tscn" id="7_defibrillator"]
 [ext_resource type="PackedScene" path="res://scenes/patient/training_patient.tscn" id="8_training_patient"]
+[ext_resource type="PackedScene" path="res://scenes/props/training_car.tscn" id="9_training_car"]
+[ext_resource type="PackedScene" path="res://scenes/props/pickup_truck.tscn" id="10_pickup_truck"]
+[ext_resource type="PackedScene" path="res://scenes/props/bystander.tscn" id="11_bystander"]
+
+[sub_resource type="Environment" id="Environment_training"]
+background_mode = 1
+background_color = Color(0.12, 0.18, 0.22, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.72, 0.78, 0.84, 1)
+ambient_light_energy = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.48, 0.46, 0.4, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
 size = Vector3(24, 0.2, 24)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(24, 0.2, 24)
-
-[sub_resource type="BoxMesh" id="BoxMesh_obstacle_a"]
-size = Vector3(2, 1.5, 1)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_obstacle_a"]
-size = Vector3(2, 1.5, 1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_obstacle_b"]
-size = Vector3(1.5, 1, 2)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_obstacle_b"]
-size = Vector3(1.5, 1, 2)
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
 radius = 0.35
@@ -35,28 +36,9 @@ height = 1.8
 radius = 0.35
 height = 1.8
 
-[sub_resource type="StandardMaterial3D" id="Material_floor"]
-albedo_color = Color(0.48, 0.46, 0.4, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="Material_obstacle_a"]
-albedo_color = Color(0.95, 0.32, 0.08, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="Material_obstacle_b"]
-albedo_color = Color(0.05, 0.48, 0.52, 1)
-roughness = 1.0
-
-[sub_resource type="Environment" id="Environment_training"]
-background_mode = 1
-background_color = Color(0.12, 0.18, 0.22, 1)
-ambient_light_source = 2
-ambient_light_color = Color(0.72, 0.78, 0.84, 1)
-ambient_light_energy = 0.8
-
 [node name="Main" type="Node3D" unique_id=751350397]
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1145898735]
 environment = SubResource("Environment_training")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=547214209]
@@ -67,31 +49,37 @@ shadow_enabled = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 
 [node name="FloorMesh" type="MeshInstance3D" parent="TrainingFloor" unique_id=779636441]
-mesh = SubResource("BoxMesh_floor")
 material_override = SubResource("Material_floor")
+mesh = SubResource("BoxMesh_floor")
 
 [node name="FloorCollision" type="CollisionShape3D" parent="TrainingFloor" unique_id=330492314]
 shape = SubResource("BoxShape3D_floor")
 
-[node name="ObstacleA" type="StaticBody3D" parent="." unique_id=542386128]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.75, -2)
+[node name="PickupTruck" parent="." instance=ExtResource("10_pickup_truck")]
+position = Vector3(-3, 0, -2)
 
-[node name="Mesh" type="MeshInstance3D" parent="ObstacleA" unique_id=192157180]
-mesh = SubResource("BoxMesh_obstacle_a")
-material_override = SubResource("Material_obstacle_a")
+[node name="TrainingCar" parent="." instance=ExtResource("9_training_car")]
+position = Vector3(3, 0, -4)
 
-[node name="Collision" type="CollisionShape3D" parent="ObstacleA" unique_id=862096553]
-shape = SubResource("BoxShape3D_obstacle_a")
+[node name="BystanderNorthWest" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(-8, 0, -6)
+rotation = Vector3(0, -2.2, 0)
+shirt_color = Color(0.18, 0.42, 0.58, 1)
 
-[node name="ObstacleB" type="StaticBody3D" parent="." unique_id=1792268613]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -4)
+[node name="BystanderNorthEast" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(8, 0, -6)
+rotation = Vector3(0, 2.2, 0)
+shirt_color = Color(0.68, 0.32, 0.16, 1)
 
-[node name="Mesh" type="MeshInstance3D" parent="ObstacleB" unique_id=777332555]
-mesh = SubResource("BoxMesh_obstacle_b")
-material_override = SubResource("Material_obstacle_b")
+[node name="BystanderSouthWest" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(-8, 0, 6)
+rotation = Vector3(0, -1.0, 0)
+shirt_color = Color(0.24, 0.48, 0.28, 1)
 
-[node name="Collision" type="CollisionShape3D" parent="ObstacleB" unique_id=1219253348]
-shape = SubResource("BoxShape3D_obstacle_b")
+[node name="BystanderSouthEast" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(8, 0, 6)
+rotation = Vector3(0, 1.0, 0)
+shirt_color = Color(0.56, 0.42, 0.2, 1)
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1115007235]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
@@ -107,29 +95,30 @@ shape = SubResource("CapsuleShape3D_player")
 
 [node name="Camera3D" type="Camera3D" parent="Player" unique_id=1297847111]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
-fov = 85.0
 current = true
+fov = 85.0
 
-[node name="HoldPoint" type="Marker3D" parent="Player/Camera3D"]
-position = Vector3(0, -0.2, -1.35)
+[node name="HoldPoint" type="Marker3D" parent="Player/Camera3D" unique_id=381189203]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, -1.35)
 
-[node name="Interactor" type="Node" parent="Player"]
+[node name="Interactor" type="Node" parent="Player" unique_id=636061588]
 script = ExtResource("4_pickup_interactor")
 
-[node name="PrimaryBag" parent="." instance=ExtResource("3_primary_bag")]
-position = Vector3(-1.0, 0.23, 2.7)
+[node name="PrimaryBag" parent="." unique_id=2092615659 instance=ExtResource("3_primary_bag")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.23, 2.7)
+pad_resting_height = 0.3
 
-[node name="SecondaryBag" parent="." instance=ExtResource("5_secondary_bag")]
-position = Vector3(1.0, 0.19, 2.7)
+[node name="SecondaryBag" parent="." unique_id=1276071056 instance=ExtResource("5_secondary_bag")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.19, 2.7)
+pad_resting_height = 0.3
 
-[node name="KOLEDefibrillator" parent="." instance=ExtResource("7_defibrillator")]
-position = Vector3(0, 0.16, 2.7)
+[node name="KOLEDefibrillator" parent="." unique_id=751403149 instance=ExtResource("7_defibrillator")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16, 2.7)
 
-[node name="Stretcher" parent="." instance=ExtResource("6_stretcher")]
-position = Vector3(0, 0, 0)
+[node name="Stretcher" parent="." unique_id=314406897 instance=ExtResource("6_stretcher")]
 
-[node name="TrainingPatient" parent="." instance=ExtResource("8_training_patient")]
-position = Vector3(1.65, 0, -1.5)
+[node name="TrainingPatient" parent="." unique_id=1308453449 instance=ExtResource("8_training_patient")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.65, 0, -1.5)
 
 [node name="MobileControlsLayer" type="CanvasLayer" parent="." unique_id=1864688205]
 

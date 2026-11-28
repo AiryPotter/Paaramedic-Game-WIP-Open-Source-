@@ -47,14 +47,13 @@ roughness = 1.0
 albedo_color = Color(0.08, 0.09, 0.1, 1)
 roughness = 1.0
 
-[node name="TrainingPatient" type="RigidBody3D" groups=["training_patient", "pickupable"]]
+[node name="TrainingPatient" type="RigidBody3D" groups=["training_patient"]]
 mass = 18.0
 linear_damp = 1.4
 angular_damp = 4.0
 contact_monitor = true
 max_contacts_reported = 4
-pad_resting_height = 0.42
-pad_resting_offset_y = -0.28
+freeze = true
 script = ExtResource("1_patient")
 
 [node name="InteractionArea" type="Area3D" parent="."]

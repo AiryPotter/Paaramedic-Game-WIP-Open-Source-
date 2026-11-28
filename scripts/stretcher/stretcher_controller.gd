@@ -1,7 +1,7 @@
 extends RigidBody3D
 class_name StretcherController
 
-## Arcade-style driving with independent front and rear caster swivel locks.
+## Arcade-style caster handling; the lowered deck locks the chassis until it is raised again.
 
 @export var maximum_speed: float = 2.2
 @export var drive_acceleration: float = 8.0
@@ -16,9 +16,11 @@ class_name StretcherController
 
 const WHEELBASE: float = 1.6
 const PAD_TOP_LOCAL_Y: float = 0.82
+const DECK_COLLISION_LOCAL_Y: float = 0.73
 const LOWERED_DECK_OFFSET: float = -0.22
 
 @onready var _deck_assembly: Node3D = $DeckAssembly
+@onready var _deck_collision: CollisionShape3D = $CollisionDeck
 @onready var _pad_area: Area3D = $DeckAssembly/PadArea
 
 var operator: CharacterBody3D
@@ -30,6 +32,8 @@ var operator_facing_yaw_offset: float = 0.0
 var front_casters_locked: bool = false
 var rear_casters_locked: bool = false
 var is_lowered: bool = false
+var is_being_loaded: bool = false
+var is_loaded_in_ambulance: bool = false
 
 var _front_casters: Array[Node3D] = []
 var _rear_casters: Array[Node3D] = []
@@ -66,7 +70,7 @@ func _ready() -> void:
 
 
 func grab(player: CharacterBody3D) -> bool:
-	if is_instance_valid(operator):
+	if is_instance_valid(operator) or is_being_loaded or is_loaded_in_ambulance:
 		return false
 
 	operator = player
@@ -154,7 +158,50 @@ func get_pad_top_local_y() -> float:
 func is_lowered_for_loading() -> bool:
 	if not is_lowered:
 		return false
-	return not is_instance_valid(_height_tween) or not _height_tween.is_running()
+	return not is_height_transitioning()
+
+
+func is_height_transitioning() -> bool:
+	return is_instance_valid(_height_tween) and _height_tween.is_running()
+
+
+func begin_ambulance_load(ambulance: Node3D, cargo_pose: Node3D) -> bool:
+	if is_being_loaded or is_loaded_in_ambulance or is_lowered or is_height_transitioning():
+		return false
+	if not is_instance_valid(ambulance) or not is_instance_valid(cargo_pose):
+		return false
+	is_being_loaded = true
+	if is_instance_valid(operator):
+		release(operator)
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+	freeze = true
+	set_deferred("collision_layer", 0)
+	set_deferred("collision_mask", 0)
+	call_deferred("_finish_ambulance_load", ambulance, cargo_pose)
+	return true
+
+
+func _finish_ambulance_load(ambulance: Node3D, cargo_pose: Node3D) -> void:
+	if not is_instance_valid(ambulance) or not is_instance_valid(cargo_pose):
+		is_being_loaded = false
+		return
+	reparent(ambulance, true)
+	var load_tween := create_tween()
+	load_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	load_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	load_tween.tween_property(self, "position", cargo_pose.position, 1.1)
+	load_tween.parallel().tween_property(self, "rotation", cargo_pose.rotation, 1.1)
+	load_tween.finished.connect(_on_ambulance_load_finished.bind(ambulance))
+
+
+func _on_ambulance_load_finished(ambulance: Node3D) -> void:
+	is_being_loaded = false
+	is_loaded_in_ambulance = true
+	GameState.record_event("stretcher_loaded_into_ambulance")
+	if ambulance.has_method("notify_stretcher_loaded"):
+		ambulance.call("notify_stretcher_loaded", self)
 
 
 func can_change_height() -> bool:
@@ -176,6 +223,7 @@ func get_height_action_label() -> String:
 func _set_height_progress(progress: float) -> void:
 	var current_offset := lerpf(_height_starting_offset, _height_target_offset, progress)
 	_deck_assembly.position.y = current_offset
+	_deck_collision.position.y = DECK_COLLISION_LOCAL_Y + current_offset
 	var height_delta := current_offset - _height_starting_offset
 	for index in range(_height_stuck_items.size()):
 		var item := _height_stuck_items[index]
@@ -185,6 +233,10 @@ func _set_height_progress(progress: float) -> void:
 
 func _finish_height_transition() -> void:
 	is_lowered = _height_target_lowered
+	freeze = is_lowered
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	GameState.record_event("stretcher_lowered" if is_lowered else "stretcher_raised")
 	_height_stuck_items.clear()
 	_height_stuck_start_heights.clear()
 
@@ -194,6 +246,9 @@ func toggle_height() -> bool:
 		return false
 
 	_height_target_lowered = not is_lowered
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 	_height_starting_offset = _deck_assembly.position.y
 	_height_target_offset = LOWERED_DECK_OFFSET if _height_target_lowered else 0.0
 	_height_stuck_items.clear()
@@ -213,7 +268,7 @@ func toggle_height() -> bool:
 
 
 func can_push_from_operator(player: CharacterBody3D) -> bool:
-	if not is_instance_valid(operator) or operator != player:
+	if not is_instance_valid(operator) or operator != player or is_lowered:
 		return false
 	if is_instance_valid(_height_tween) and _height_tween.is_running():
 		return false
@@ -369,15 +424,13 @@ func apply_character_bump(
 
 
 func _stick_holdables_to_pad() -> void:
+	if is_height_transitioning():
+		return
 	for overlapping_body in _pad_area.get_overlapping_bodies():
 		if not overlapping_body is HoldableObject:
 			continue
 		var item := overlapping_body as HoldableObject
 		if item.is_held or item.is_stuck:
-			continue
-		if item.is_in_group("training_patient"):
-			if item.has_method("can_load_onto") and bool(item.call("can_load_onto", self)):
-				item.call("load_onto_stretcher", self)
 			continue
 
 		var local_center := to_local(item.global_position)
@@ -405,9 +458,13 @@ func _physics_process(delta: float) -> void:
 		return
 	if is_instance_valid(_height_tween) and _height_tween.is_running():
 		operator_input = Vector2.ZERO
-		linear_velocity.x = 0.0
-		linear_velocity.z = 0.0
-		angular_velocity.y = 0.0
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+		return
+	if is_lowered:
+		operator_input = Vector2.ZERO
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
 		return
 
 	var longitudinal_input := -operator_input.y

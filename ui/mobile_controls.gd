@@ -8,7 +8,7 @@ extends Control
 @export_range(0.0005, 0.02, 0.0005) var look_sensitivity: float = 0.003
 
 const JOYSTICK_RADIUS: float = 68.0
-const JOYSTICK_MARGIN: float = 92.0
+const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/ui/pause_menu.tscn")
 
 var player: PlayerController
 var interactor: Node
@@ -20,6 +20,8 @@ var push_button: Button
 var height_button: Button
 var front_lock_button: Button
 var rear_lock_button: Button
+var pause_button: Button
+var pause_menu: Control
 var joystick_touch_id: int = -1
 var look_touch_id: int = -1
 var joystick_offset: Vector2 = Vector2.ZERO
@@ -31,12 +33,17 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	player = get_node(player_path) as PlayerController
 	interactor = get_node(interactor_path)
+	look_sensitivity = GameState.look_sensitivity
+	GameState.settings_changed.connect(_on_settings_changed)
 	_build_interaction_button()
 	_build_status_panel()
 	_build_toss_button()
 	_build_lock_buttons()
 	_build_push_button()
 	_build_height_button()
+	_build_pause_button()
+	pause_menu = PAUSE_MENU_SCENE.instantiate() as Control
+	add_child(pause_menu)
 	_last_stretcher_grabbed = bool(interactor.call("is_stretcher_grabbed"))
 	resized.connect(_reset_touch_state)
 	queue_redraw()
@@ -47,6 +54,9 @@ func _process(_delta: float) -> void:
 	if interaction_button.text != action_label:
 		interaction_button.text = action_label
 	var current_status := str(interactor.call("get_status_text"))
+	var objective := GameState.get_current_objective()
+	if not objective.is_empty():
+		current_status = "OBJECTIVE: %s\n%s" % [objective, current_status]
 	if status_label.text != current_status:
 		status_label.text = current_status
 	toss_button.visible = bool(interactor.call("has_held_object"))
@@ -83,6 +93,13 @@ func _notification(what: int) -> void:
 
 func _exit_tree() -> void:
 	_reset_touch_state()
+	if GameState.settings_changed.is_connected(_on_settings_changed):
+		GameState.settings_changed.disconnect(_on_settings_changed)
+
+
+func _on_settings_changed() -> void:
+	look_sensitivity = GameState.look_sensitivity
+	queue_redraw()
 
 
 func _input(event: InputEvent) -> void:
@@ -101,7 +118,7 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 	if _touch_hits_control(event.position):
 		return
 
-	if event.position.x < size.x * 0.5 and event.position.y > size.y * 0.45:
+	if event.position.x < size.x * 0.5:
 		if joystick_touch_id == -1:
 			joystick_touch_id = event.index
 			_update_joystick(event.position)
@@ -126,6 +143,8 @@ func _touch_hits_control(touch_position: Vector2) -> bool:
 	if push_button.visible and push_button.get_global_rect().has_point(touch_position):
 		return true
 	if height_button.visible and height_button.get_global_rect().has_point(touch_position):
+		return true
+	if pause_button.get_global_rect().has_point(touch_position):
 		return true
 	return false
 
@@ -175,14 +194,18 @@ func _update_joystick(touch_position: Vector2) -> void:
 
 
 func _joystick_center() -> Vector2:
-	return Vector2(JOYSTICK_MARGIN, size.y - JOYSTICK_MARGIN)
+	return GameState.move_joystick_position * size
+
+
+func _look_joystick_center() -> Vector2:
+	return GameState.look_joystick_position * size
 
 
 func _build_interaction_button() -> void:
 	interaction_button = Button.new()
 	interaction_button.name = "InteractionButton"
 	interaction_button.text = "INTERACT"
-	interaction_button.tooltip_text = "Aim at the patient to assess or pick up the mannequin; use TOSS to throw a held item."
+	interaction_button.tooltip_text = "Assess the mannequin, then lower and line up the stretcher before tapping TRANSFER."
 	interaction_button.focus_mode = Control.FOCUS_NONE
 	interaction_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	interaction_button.anchor_left = 0.5
@@ -220,7 +243,7 @@ func _build_status_panel() -> void:
 	status_panel.offset_left = 16.0
 	status_panel.offset_right = -16.0
 	status_panel.offset_top = 16.0
-	status_panel.offset_bottom = 124.0
+	status_panel.offset_bottom = 158.0
 	status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.04, 0.14, 0.19, 0.92)
@@ -239,7 +262,7 @@ func _build_status_panel() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	status_label.add_theme_font_size_override("font_size", 15)
+	status_label.add_theme_font_size_override("font_size", 14)
 	status_label.add_theme_color_override("font_color", Color(0.93, 0.96, 0.98, 1.0))
 	status_panel.add_child(status_label)
 	add_child(status_panel)
@@ -249,7 +272,7 @@ func _build_toss_button() -> void:
 	toss_button = Button.new()
 	toss_button.name = "TossButton"
 	toss_button.text = "TOSS"
-	toss_button.tooltip_text = "Toss the held item toward the crosshair; a lowered stretcher catches the mannequin over a generous deck area."
+	toss_button.tooltip_text = "Toss held equipment. Transfer the mannequin with INTERACT after lining up the lowered stretcher."
 	toss_button.visible = false
 	toss_button.focus_mode = Control.FOCUS_NONE
 	toss_button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -303,6 +326,31 @@ func _build_push_button() -> void:
 
 func _on_push_pressed() -> void:
 	interactor.call("request_push")
+
+
+func _build_pause_button() -> void:
+	pause_button = Button.new()
+	pause_button.name = "PauseButton"
+	pause_button.text = "PAUSE"
+	pause_button.tooltip_text = "Pause the training session."
+	pause_button.focus_mode = Control.FOCUS_NONE
+	pause_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause_button.anchor_left = 1.0
+	pause_button.anchor_right = 1.0
+	pause_button.anchor_top = 0.0
+	pause_button.anchor_bottom = 0.0
+	pause_button.offset_left = -112.0
+	pause_button.offset_right = -24.0
+	pause_button.offset_top = 166.0
+	pause_button.offset_bottom = 220.0
+	pause_button.add_theme_font_size_override("font_size", 16)
+	pause_button.pressed.connect(_on_pause_pressed)
+	add_child(pause_button)
+
+
+func _on_pause_pressed() -> void:
+	if is_instance_valid(pause_menu):
+		pause_menu.call("open")
 
 
 func _build_height_button() -> void:
@@ -401,7 +449,7 @@ func _draw() -> void:
 	draw_arc(center, JOYSTICK_RADIUS, 0.0, TAU, 48, Color(0.85, 0.9, 0.95, 0.75), 3.0)
 	draw_circle(center + joystick_offset, 25.0, Color(0.76, 0.84, 0.91, 0.88))
 
-	var look_center := Vector2(size.x - JOYSTICK_MARGIN, size.y - JOYSTICK_MARGIN)
+	var look_center := _look_joystick_center()
 	draw_circle(look_center, JOYSTICK_RADIUS, Color(0.08, 0.10, 0.13, 0.48))
 	draw_arc(look_center, JOYSTICK_RADIUS, 0.0, TAU, 48, Color(0.85, 0.9, 0.95, 0.75), 3.0)
 	draw_circle(look_center + look_offset, 25.0, Color(0.76, 0.84, 0.91, 0.88))

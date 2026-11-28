@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ScenarioDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/scenario_definition.gd" id="1_scenario"]
+
+[resource]
+script = ExtResource("1_scenario")
+scenario_id = "training_sandbox"
+title = "Training Sandbox"
+location = "Paramedic training area"
+briefing = "Practice touch controls, equipment handling, and stretcher operation. This sandbox contains no clinical findings or treatment instructions."
+patient_case = "Training mannequin placeholder; no symptoms, vital signs, diagnosis, or treatment guidance. Approved scenario content is pending."
+objectives = PackedStringArray("Assess the training mannequin", "Secure the mannequin on the lowered stretcher", "Raise the stretcher and wheel it to the ambulance", "Align and load the stretcher into the parked ambulance")
+objective_event_names = PackedStringArray("patient_assessed", "patient_secured_to_stretcher", "stretcher_raised", "stretcher_loaded_into_ambulance")
+hazards = PackedStringArray()
+scoring_criteria = {}
