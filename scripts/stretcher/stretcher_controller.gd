@@ -17,9 +17,11 @@ class_name StretcherController
 const WHEELBASE: float = 1.6
 const PAD_TOP_LOCAL_Y: float = 0.82
 const LOWERED_DECK_OFFSET: float = -0.22
+const DECK_COLLISION_Y: float = 0.73
 
 @onready var _deck_assembly: Node3D = $DeckAssembly
 @onready var _pad_area: Area3D = $DeckAssembly/PadArea
+@onready var _deck_collision: CollisionShape3D = $CollisionDeck
 
 var operator: CharacterBody3D
 var operator_input: Vector2 = Vector2.ZERO
@@ -176,6 +178,7 @@ func get_height_action_label() -> String:
 func _set_height_progress(progress: float) -> void:
 	var current_offset := lerpf(_height_starting_offset, _height_target_offset, progress)
 	_deck_assembly.position.y = current_offset
+	_deck_collision.position.y = DECK_COLLISION_Y + current_offset
 	var height_delta := current_offset - _height_starting_offset
 	for index in range(_height_stuck_items.size()):
 		var item := _height_stuck_items[index]
@@ -376,9 +379,7 @@ func _stick_holdables_to_pad() -> void:
 		if item.is_held or item.is_stuck:
 			continue
 		if item.is_in_group("training_patient"):
-			if item.has_method("can_load_onto") and bool(item.call("can_load_onto", self)):
-				item.call("load_onto_stretcher", self)
-			continue
+			continue  # The patient is moved only by TRANSFER.
 
 		var local_center := to_local(item.global_position)
 		var local_yaw := wrapf(item.global_rotation.y - global_rotation.y, -PI, PI)

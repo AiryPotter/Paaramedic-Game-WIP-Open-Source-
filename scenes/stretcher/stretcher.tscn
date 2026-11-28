@@ -18,7 +18,7 @@ rough = false
 bounce = 0.0
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_pad_area"]
-size = Vector3(1.45, 0.66, 2.7)
+size = Vector3(1, 0.06, 2.2)
 
 [sub_resource type="BoxMesh" id="BoxMesh_deck"]
 size = Vector3(1.0, 0.18, 2.2)
@@ -68,7 +68,7 @@ position = Vector3(0, 0.73, 0)
 mesh = SubResource("BoxMesh_deck")
 material_override = SubResource("Material_deck")
 
-[node name="CollisionDeck" type="CollisionShape3D" parent="DeckAssembly"]
+[node name="CollisionDeck" type="CollisionShape3D" parent="."]
 position = Vector3(0, 0.73, 0)
 shape = SubResource("BoxShape3D_deck")
 
@@ -77,7 +77,7 @@ collision_layer = 0
 collision_mask = 1
 
 [node name="Collision" type="CollisionShape3D" parent="DeckAssembly/PadArea"]
-position = Vector3(0, 1.15, 0)
+position = Vector3(0, 0.84, 0)
 shape = SubResource("BoxShape3D_pad_area")
 
 [node name="CollisionFloorSupport" type="CollisionShape3D" parent="."]

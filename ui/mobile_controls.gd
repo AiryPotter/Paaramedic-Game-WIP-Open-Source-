@@ -182,7 +182,7 @@ func _build_interaction_button() -> void:
 	interaction_button = Button.new()
 	interaction_button.name = "InteractionButton"
 	interaction_button.text = "INTERACT"
-	interaction_button.tooltip_text = "Aim at the patient to assess or pick up the mannequin; use TOSS to throw a held item."
+	interaction_button.tooltip_text = "Aim at the patient to assess them, or TRANSFER them onto a lowered, lined-up stretcher."
 	interaction_button.focus_mode = Control.FOCUS_NONE
 	interaction_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	interaction_button.anchor_left = 0.5
@@ -249,7 +249,7 @@ func _build_toss_button() -> void:
 	toss_button = Button.new()
 	toss_button.name = "TossButton"
 	toss_button.text = "TOSS"
-	toss_button.tooltip_text = "Toss the held item toward the crosshair; a lowered stretcher catches the mannequin over a generous deck area."
+	toss_button.tooltip_text = "Toss the held item toward the crosshair."
 	toss_button.visible = false
 	toss_button.focus_mode = Control.FOCUS_NONE
 	toss_button.mouse_filter = Control.MOUSE_FILTER_STOP

@@ -4,7 +4,7 @@ class_name PickupInteractor
 ## Queues touch-triggered pickup/release requests for the physics tick.
 
 @export var bag_interaction_distance: float = 2.8
-@export var stretcher_interaction_distance: float = 6.5
+@export var stretcher_interaction_distance: float = 5.5
 @export_range(0.5, 4.0, 0.1) var maximum_toss_speed: float = 2.8
 
 var player: CharacterBody3D
@@ -122,7 +122,7 @@ func toggle_rear_caster_lock() -> void:
 
 func get_action_label() -> String:
 	if is_instance_valid(held_object):
-		return "DROP PATIENT" if held_object.is_in_group("training_patient") else "DROP ITEM"
+		return "DROP ITEM"
 	if is_instance_valid(grabbed_stretcher):
 		return "RELEASE STRETCHER"
 	var patient := _get_aimed_patient()
@@ -131,24 +131,17 @@ func get_action_label() -> String:
 			return "APPROACH PATIENT"
 		if bool(patient.get("is_loaded")):
 			return "PATIENT LOADED"
-		return "PICK UP PATIENT" if bool(patient.get("assessment_started")) else "ASSESS PATIENT"
+		if not bool(patient.get("assessment_started")):
+			return "ASSESS PATIENT"
+		var hint := str(patient.call("get_transfer_hint", _stretcher))
+		return "TRANSFER" if hint.is_empty() else hint
 	return "INTERACT"
 
 
 func get_status_text() -> String:
 	if not is_instance_valid(_training_patient) or not _training_patient.has_method("get_hud_text"):
 		return "TRAINING CASE 01\nFind the patient and assess them."
-	if bool(_training_patient.get("is_loaded")):
-		return str(_training_patient.call("get_hud_text"))
-	if not bool(_training_patient.get("assessment_started")):
-		return str(_training_patient.call("get_hud_text"))
-	if not is_instance_valid(_stretcher):
-		return "Assessment recorded. Bring the stretcher to the mannequin."
-	if not bool(_stretcher.call("is_lowered_for_loading")):
-		return "Assessment recorded. Stop and lower the stretcher before securing the mannequin."
-	if is_instance_valid(held_object) and held_object.is_in_group("training_patient"):
-		return "Mannequin held. Aim at the lowered deck and tap TOSS."
-	return "Stretcher lowered. Pick up and toss the mannequin onto the deck to secure it."
+	return str(_training_patient.call("get_hud_text", _stretcher))
 
 
 func _physics_process(_delta: float) -> void:
@@ -227,9 +220,8 @@ func _try_pick_up_object() -> void:
 		if not bool(patient.get("assessment_started")):
 			patient.call("assess_patient")
 			return
-		if patient is HoldableObject and not bool(patient.get("is_held")):
-			held_object = patient as HoldableObject
-			held_object.pick_up(hold_point.global_transform)
+		if str(patient.call("get_transfer_hint", _stretcher)).is_empty():
+			patient.call("load_onto_stretcher", _stretcher)
 		return
 
 	var collider: Object = _aimed_collider

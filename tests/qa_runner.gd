@@ -145,6 +145,7 @@ func _run_suite() -> void:
 
 	_mobile_controls.set_process_input(false)
 	_test_camera_and_world()
+	await _test_stretcher_collision_shapes()
 	await _test_patient_ray_target()
 	_test_touch_id_reuse()
 	await _test_kole_impacts()
@@ -208,12 +209,15 @@ func _test_patient_ray_target() -> void:
 	)
 	_patient.call("assess_patient")
 	await get_tree().process_frame
+	await get_tree().process_frame
+	var expected_hint := str(_patient.call("get_transfer_hint", _stretcher))
 	_record(
-		"Assessment changes action to PICK UP PATIENT",
+		"Assessment leads to a TRANSFER hint, never PICK UP",
 		interaction_button != null
-			and str(_interactor.call("get_action_label")) == "PICK UP PATIENT"
-			and interaction_button.text == "PICK UP PATIENT",
-		""
+			and not expected_hint.is_empty()
+			and str(_interactor.call("get_action_label")) == expected_hint
+			and interaction_button.text == expected_hint,
+		"Action: %s." % expected_hint
 	)
 	_patient.set("assessment_started", false)
 	_player.global_transform = saved_player_transform
@@ -392,18 +396,31 @@ func _test_stretcher_patient_and_pad() -> void:
 	_bag.freeze = true
 	_bag.linear_velocity = Vector3.ZERO
 	_bag.angular_velocity = Vector3.ZERO
-	_bag.global_position = _stretcher.to_global(Vector3(0.8, 1.2, -0.5))
+	_bag.global_transform = _stretcher.global_transform * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.4, -0.5))
 	await _wait_physics_frames(8)
-	var bag_stuck := bool(_bag.get("is_stuck")) and _bag.get("stuck_to") == _stretcher
+	_record(
+		"Bag above the pad does not stick (touch only)",
+		not bool(_bag.get("is_stuck")),
+		"Held still 0.35 m above the pad."
+	)
+	# 0.8 m wide bag centered at x 0.75: overhangs the 0.5 m edge but its base touches the pad.
+	_bag.global_transform = _stretcher.global_transform * Transform3D(Basis.IDENTITY, Vector3(0.75, 1.06, -0.5))
+	_bag.freeze = false
+	_bag.sleeping = false
+	await _wait_physics_frames(20)
+	var bag_stuck: bool = bool(_bag.get("is_stuck")) and _bag.get("stuck_to") == _stretcher
 	var bag_local_position := _stretcher.to_local(_bag.global_position)
 	_record(
-		"Pad sensor secures an overhanging bag",
+		"Pad sensor secures an overhanging bag that touches it",
 		bag_stuck and bag_local_position.x > 0.5,
-		"Uses a real physics overlap near the pad edge."
+		"Local x %.2f." % bag_local_position.x
 	)
 	var bag_y_before_lower := bag_local_position.y
 
-	_patient.global_position = _stretcher.to_global(Vector3(1.2, 0.0, 0.0))
+	_patient.global_position = _stretcher.to_global(Vector3(1.0, 0.0, 0.0))
+	_patient.global_rotation = Vector3(0.0, _stretcher.global_rotation.y, 0.0)
+	_patient.linear_velocity = Vector3.ZERO
+	_patient.angular_velocity = Vector3.ZERO
 	var patient_not_assessed := not bool(_patient.call("can_load_onto", _stretcher))
 	_patient.call("assess_patient")
 	var patient_cannot_load_high := not bool(_patient.call("can_load_onto", _stretcher))
@@ -456,56 +473,46 @@ func _test_stretcher_patient_and_pad() -> void:
 
 	var patient_can_load := bool(_patient.call("can_load_onto", _stretcher))
 	_record(
-		"Assessment and lowered deck permit patient loading",
+		"Assessment, lowered deck and alignment permit TRANSFER",
 		lowered and patient_can_load,
-		""
+		"Hint: '%s'." % str(_patient.call("get_transfer_hint", _stretcher))
 	)
 	var hold_point := _player.get_node_or_null("Camera3D/HoldPoint") as Node3D
-	var patient_picked_up := false
-	if patient_can_load and hold_point != null:
+	if hold_point != null:
 		_patient.call("pick_up", hold_point.global_transform)
-		patient_picked_up = bool(_patient.get("is_held"))
-		if patient_picked_up:
-			_interactor.set("held_object", _patient)
-	_record("Assessed patient can be physically picked up", patient_picked_up, "")
-	var held_patient_rejected := patient_picked_up and not bool(_patient.call("can_load_onto", _stretcher))
-	_record("Held patient cannot secure until released", held_patient_rejected, "")
-	await get_tree().process_frame
-	var toss_button := _mobile_controls.get_node_or_null("TossButton") as Button
-	var toss_button_ready := patient_picked_up and toss_button != null and toss_button.visible
-	_record("TOSS control appears for held patient", toss_button_ready, "")
-	if toss_button_ready:
-		toss_button.emit_signal("pressed")
-		await _wait_for_property_bool(_patient, "is_held", false, 5)
-	var toss_released_patient := (
-		toss_button_ready
-		and not bool(_patient.get("is_held"))
-		and not bool(_interactor.call("has_held_object"))
+	_record("Patient can never be picked up or carried", not bool(_patient.get("is_held")), "")
+
+	var aligned_rotation := _patient.global_rotation
+	_patient.global_rotation = aligned_rotation + Vector3(0.0, PI * 0.5, 0.0)
+	_record(
+		"Crossways patient asks to line up the stretcher",
+		str(_patient.call("get_transfer_hint", _stretcher)) == "LINE UP STRETCHER",
+		""
 	)
-	_record("TOSS releases patient into physics", toss_released_patient, "")
-	if patient_picked_up:
-		var toss_transform := _stretcher.global_transform * Transform3D(
-			Basis.IDENTITY, Vector3(0.8, 1.0, 0.8)
-		)
-		if bool(_patient.get("is_held")):
-			_patient.call("release", toss_transform, Vector3.ZERO)
-			_interactor.set("held_object", null)
-		_patient.global_transform = toss_transform
-		_patient.linear_velocity = Vector3(0.0, 0.0, -1.5)
-		_patient.angular_velocity = Vector3.ZERO
+	_patient.global_rotation = aligned_rotation
+
+	var mass_before := _stretcher.mass
+	var transfer_started := bool(_patient.call("load_onto_stretcher", _stretcher))
 	await _wait_physics_frames(40)
 	var deck := _stretcher.get_node_or_null("DeckAssembly") as Node3D
 	var patient_loaded := (
-		patient_picked_up
+		transfer_started
 		and bool(_patient.get("is_loaded"))
 		and deck != null
 		and _patient.get_parent() == deck
 	)
 	_record(
-		"Off-center toss is caught and snapped onto deck",
+		"TRANSFER slides the patient onto the deck",
 		patient_loaded,
-		"Landing at local offset x=0.8, z=0.8 checks a forgiving catch area."
+		""
 	)
+	_record(
+		"Loaded patient adds weight to the stretcher",
+		patient_loaded and _stretcher.mass > mass_before,
+		"Mass %.1f -> %.1f kg." % [mass_before, _stretcher.mass]
+	)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	var status_label := _mobile_controls.get_node_or_null("StatusPanel/StatusText") as Label
 	_record(
 		"Mobile status reports loaded state",
@@ -521,9 +528,10 @@ func _test_stretcher_patient_and_pad() -> void:
 	else:
 		_interactor.call("request_height_toggle")
 	await get_tree().physics_frame
-	var raised := await _wait_for_method_bool(
-		_stretcher, "is_lowered_for_loading", false, MAX_TRANSITION_FRAMES
+	var raised := await _wait_for_property_bool(
+		_stretcher, "is_lowered", false, MAX_TRANSITION_FRAMES
 	)
+	await _wait_physics_frames(2)
 	var patient_y_after_raise := _patient.global_position.y
 	_record(
 		"RAISE carries loaded patient",
@@ -568,6 +576,40 @@ func _test_stretcher_patient_and_pad() -> void:
 	_stretcher.call("release", _player)
 	_interactor.set("grabbed_stretcher", null)
 	await _wait_for_property_bool(_player, "_camera_transitioning", false, MAX_TRANSITION_FRAMES)
+
+
+func _test_stretcher_collision_shapes() -> void:
+	# Godot ignores a CollisionShape3D unless its direct parent is a physics body or area.
+	var orphans: Array[String] = []
+	var pending: Array[Node] = [_stretcher]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		for child in node.get_children():
+			pending.append(child)
+			if child is CollisionShape3D and not (child.get_parent() is CollisionObject3D):
+				orphans.append(str(_stretcher.get_path_to(child)))
+	_record(
+		"Stretcher collision shapes are all active",
+		orphans.is_empty(),
+		("Inactive: " + ", ".join(orphans)) if not orphans.is_empty() else ""
+	)
+
+	await _wait_physics_frames(2)
+	var deck_center := _stretcher.to_global(Vector3(0.0, 0.73, 0.0))
+	var query := PhysicsRayQueryParameters3D.create(
+		deck_center + Vector3.UP * 1.5,
+		deck_center + Vector3.DOWN * 0.5
+	)
+	var hit := _stretcher.get_world_3d().direct_space_state.intersect_ray(query)
+	# Without the deck collider the ray would still hit the low floor support, so check height.
+	var hit_local_y := -INF
+	if not hit.is_empty():
+		hit_local_y = _stretcher.to_local(hit.get("position")).y
+	_record(
+		"Ray at the deck hits the deck top",
+		not hit.is_empty() and hit.get("collider") == _stretcher and hit_local_y > 0.6,
+		"Local hit height %.2f m." % hit_local_y
+	)
 
 
 func _test_bumps_with_caster_locks() -> void:
@@ -621,6 +663,7 @@ func _test_push_button() -> void:
 	var grabbed := bool(_stretcher.call("grab", _player))
 	if grabbed:
 		_interactor.set("grabbed_stretcher", _stretcher)
+	await get_tree().process_frame
 	await get_tree().process_frame
 	var push_button := _mobile_controls.get_node_or_null("PushButton") as Button
 	var button_ready := (
