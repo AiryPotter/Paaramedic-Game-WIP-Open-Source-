@@ -1,0 +1,112 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/equipment/defibrillator.gd" id="1_defibrillator"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_device"]
+size = Vector3(0.62, 0.3, 0.48)
+
+[sub_resource type="BoxMesh" id="BoxMesh_device"]
+size = Vector3(0.62, 0.3, 0.48)
+
+[sub_resource type="BoxMesh" id="BoxMesh_screen"]
+size = Vector3(0.38, 0.18, 0.022)
+
+[sub_resource type="BoxMesh" id="BoxMesh_handle"]
+size = Vector3(0.26, 0.07, 0.1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_button"]
+size = Vector3(0.075, 0.045, 0.025)
+
+[sub_resource type="BoxMesh" id="BoxMesh_crack"]
+size = Vector3(0.012, 0.11, 0.005)
+
+[sub_resource type="StandardMaterial3D" id="Material_device"]
+albedo_color = Color(0.78, 0.82, 0.75, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_trim"]
+albedo_color = Color(0.16, 0.22, 0.24, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_screen"]
+albedo_color = Color(0.025, 0.075, 0.11, 1)
+roughness = 0.65
+
+[sub_resource type="StandardMaterial3D" id="Material_crack"]
+albedo_color = Color(0.78, 0.88, 0.9, 1)
+roughness = 1.0
+
+[node name="KOLEDefibrillator" type="RigidBody3D" groups=["pickupable"]]
+mass = 3.5
+linear_damp = 1.0
+contact_monitor = true
+max_contacts_reported = 4
+pad_resting_height = 0.3
+script = ExtResource("1_defibrillator")
+
+[node name="DeviceBody" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_device")
+material_override = SubResource("Material_device")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_device")
+
+[node name="Display" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.025, 0.251)
+mesh = SubResource("BoxMesh_screen")
+material_override = SubResource("Material_screen")
+
+[node name="Handle" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.185, 0)
+mesh = SubResource("BoxMesh_handle")
+material_override = SubResource("Material_trim")
+
+[node name="BrandLabel" type="Label3D" parent="."]
+position = Vector3(0, -0.115, 0.25)
+text = "KOLE"
+font_size = 20
+pixel_size = 0.0025
+modulate = Color(0.8, 0.9, 0.93, 1)
+
+[node name="ShockButton" type="MeshInstance3D" parent="."]
+position = Vector3(-0.12, -0.105, 0.252)
+mesh = SubResource("BoxMesh_button")
+material_override = SubResource("Material_device")
+
+[node name="PowerButton" type="MeshInstance3D" parent="."]
+position = Vector3(0.12, -0.105, 0.252)
+mesh = SubResource("BoxMesh_button")
+material_override = SubResource("Material_trim")
+
+[node name="CrackedScreen" type="Node3D" parent="."]
+visible = false
+position = Vector3(0, 0.025, 0.265)
+
+[node name="CrackCenter" type="MeshInstance3D" parent="CrackedScreen"]
+position = Vector3(0.015, 0, 0)
+mesh = SubResource("BoxMesh_crack")
+material_override = SubResource("Material_crack")
+
+[node name="CrackUpperLeft" type="MeshInstance3D" parent="CrackedScreen"]
+position = Vector3(-0.04, 0.045, 0)
+rotation = Vector3(0, 0, 0.65)
+mesh = SubResource("BoxMesh_crack")
+material_override = SubResource("Material_crack")
+
+[node name="CrackLowerLeft" type="MeshInstance3D" parent="CrackedScreen"]
+position = Vector3(-0.045, -0.045, 0)
+rotation = Vector3(0, 0, -0.7)
+mesh = SubResource("BoxMesh_crack")
+material_override = SubResource("Material_crack")
+
+[node name="CrackUpperRight" type="MeshInstance3D" parent="CrackedScreen"]
+position = Vector3(0.075, 0.035, 0)
+rotation = Vector3(0, 0, -0.85)
+mesh = SubResource("BoxMesh_crack")
+material_override = SubResource("Material_crack")
+
+[node name="CrackLowerRight" type="MeshInstance3D" parent="CrackedScreen"]
+position = Vector3(0.06, -0.055, 0)
+rotation = Vector3(0, 0, 0.85)
+mesh = SubResource("BoxMesh_crack")
+material_override = SubResource("Material_crack")

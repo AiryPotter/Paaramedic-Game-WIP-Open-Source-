@@ -1,0 +1,219 @@
+[gd_scene load_steps=25 format=3]
+
+[ext_resource type="Script" path="res://scripts/ambulance/ambulance_controller.gd" id="1_ambulance"]
+
+[sub_resource type="BoxMesh" id="Mesh_side"]
+size = Vector3(0.18, 2.35, 4.7)
+
+[sub_resource type="BoxMesh" id="Mesh_roof"]
+size = Vector3(2.7, 0.18, 4.8)
+
+[sub_resource type="BoxMesh" id="Mesh_front_wall"]
+size = Vector3(2.55, 2.25, 0.18)
+
+[sub_resource type="BoxMesh" id="Mesh_cab"]
+size = Vector3(2.7, 2.2, 2.3)
+
+[sub_resource type="BoxMesh" id="Mesh_window"]
+size = Vector3(1.05, 0.58, 0.07)
+
+[sub_resource type="BoxMesh" id="Mesh_side_window"]
+size = Vector3(0.07, 0.62, 0.82)
+
+[sub_resource type="BoxMesh" id="Mesh_blue_stripe"]
+size = Vector3(0.05, 0.34, 4.3)
+
+[sub_resource type="BoxMesh" id="Mesh_cargo_floor"]
+size = Vector3(2.35, 0.1, 4.6)
+
+[sub_resource type="BoxMesh" id="Mesh_ramp"]
+size = Vector3(2.05, 0.1, 1.2)
+
+[sub_resource type="BoxMesh" id="Mesh_rear_bumper"]
+size = Vector3(2.75, 0.28, 0.18)
+
+[sub_resource type="BoxMesh" id="Mesh_rear_light"]
+size = Vector3(0.16, 0.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="Shape_side"]
+size = Vector3(0.18, 2.35, 4.7)
+
+[sub_resource type="BoxShape3D" id="Shape_roof"]
+size = Vector3(2.7, 0.18, 4.8)
+
+[sub_resource type="BoxShape3D" id="Shape_front_wall"]
+size = Vector3(2.55, 2.25, 0.18)
+
+[sub_resource type="BoxShape3D" id="Shape_cab"]
+size = Vector3(2.7, 2.2, 2.3)
+
+[sub_resource type="BoxShape3D" id="Shape_cargo_floor"]
+size = Vector3(2.35, 0.1, 4.6)
+
+[sub_resource type="BoxShape3D" id="Shape_load_zone"]
+size = Vector3(3.8, 2.2, 4.0)
+
+[sub_resource type="CylinderMesh" id="Mesh_tire"]
+height = 0.22
+radial_segments = 12
+radius = 0.38
+
+[sub_resource type="StandardMaterial3D" id="Material_white"]
+albedo_color = Color(0.88, 0.9, 0.88, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="Material_blue"]
+albedo_color = Color(0.08, 0.34, 0.57, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_glass"]
+albedo_color = Color(0.11, 0.24, 0.31, 1)
+roughness = 0.28
+
+[sub_resource type="StandardMaterial3D" id="Material_dark"]
+albedo_color = Color(0.045, 0.06, 0.07, 1)
+roughness = 0.92
+
+[sub_resource type="StandardMaterial3D" id="Material_red"]
+albedo_color = Color(0.72, 0.12, 0.1, 1)
+roughness = 0.75
+
+[node name="Ambulance" type="Node3D" groups=["ambulance"]]
+script = ExtResource("1_ambulance")
+
+[node name="VehicleCollision" type="StaticBody3D" parent="."]
+
+[node name="CargoFloorCollision" type="CollisionShape3D" parent="VehicleCollision"]
+position = Vector3(0, 0, 0)
+shape = SubResource("Shape_cargo_floor")
+
+[node name="LeftWallCollision" type="CollisionShape3D" parent="VehicleCollision"]
+position = Vector3(-1.25, 1.22, -0.05)
+shape = SubResource("Shape_side")
+
+[node name="RightWallCollision" type="CollisionShape3D" parent="VehicleCollision"]
+position = Vector3(1.25, 1.22, -0.05)
+shape = SubResource("Shape_side")
+
+[node name="RoofCollision" type="CollisionShape3D" parent="VehicleCollision"]
+position = Vector3(0, 2.42, -0.05)
+shape = SubResource("Shape_roof")
+
+[node name="FrontBulkheadCollision" type="CollisionShape3D" parent="VehicleCollision"]
+position = Vector3(0, 1.12, -2.34)
+shape = SubResource("Shape_front_wall")
+
+[node name="CabCollision" type="CollisionShape3D" parent="VehicleCollision"]
+position = Vector3(0, 1.12, -3.55)
+shape = SubResource("Shape_cab")
+
+[node name="CargoFloor" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, 0)
+mesh = SubResource("Mesh_cargo_floor")
+material_override = SubResource("Material_dark")
+
+[node name="LeftCargoWall" type="MeshInstance3D" parent="."]
+position = Vector3(-1.25, 1.22, -0.05)
+mesh = SubResource("Mesh_side")
+material_override = SubResource("Material_white")
+
+[node name="RightCargoWall" type="MeshInstance3D" parent="."]
+position = Vector3(1.25, 1.22, -0.05)
+mesh = SubResource("Mesh_side")
+material_override = SubResource("Material_white")
+
+[node name="CargoRoof" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.42, -0.05)
+mesh = SubResource("Mesh_roof")
+material_override = SubResource("Material_white")
+
+[node name="FrontBulkhead" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.12, -2.34)
+mesh = SubResource("Mesh_front_wall")
+material_override = SubResource("Material_white")
+
+[node name="CabBody" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.12, -3.55)
+mesh = SubResource("Mesh_cab")
+material_override = SubResource("Material_white")
+
+[node name="Windshield" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.7, -4.72)
+mesh = SubResource("Mesh_window")
+material_override = SubResource("Material_glass")
+
+[node name="SideWindowLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-1.36, 1.72, -3.55)
+mesh = SubResource("Mesh_side_window")
+material_override = SubResource("Material_glass")
+
+[node name="SideWindowRight" type="MeshInstance3D" parent="."]
+position = Vector3(1.36, 1.72, -3.55)
+mesh = SubResource("Mesh_side_window")
+material_override = SubResource("Material_glass")
+
+[node name="BlueStripeLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-1.36, 1.0, -0.05)
+mesh = SubResource("Mesh_blue_stripe")
+material_override = SubResource("Material_blue")
+
+[node name="BlueStripeRight" type="MeshInstance3D" parent="."]
+position = Vector3(1.36, 1.0, -0.05)
+mesh = SubResource("Mesh_blue_stripe")
+material_override = SubResource("Material_blue")
+
+[node name="RearBumper" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.18, 2.38)
+mesh = SubResource("Mesh_rear_bumper")
+material_override = SubResource("Material_dark")
+
+[node name="LoadingRamp" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.02, 3.0)
+mesh = SubResource("Mesh_ramp")
+material_override = SubResource("Material_dark")
+
+[node name="RearLightLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-1.0, 1.6, 2.42)
+mesh = SubResource("Mesh_rear_light")
+material_override = SubResource("Material_red")
+
+[node name="RearLightRight" type="MeshInstance3D" parent="."]
+position = Vector3(1.0, 1.6, 2.42)
+mesh = SubResource("Mesh_rear_light")
+material_override = SubResource("Material_red")
+
+[node name="TireFrontLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-1.36, 0.38, -3.55)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_tire")
+material_override = SubResource("Material_dark")
+
+[node name="TireFrontRight" type="MeshInstance3D" parent="."]
+position = Vector3(1.36, 0.38, -3.55)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_tire")
+material_override = SubResource("Material_dark")
+
+[node name="TireRearLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-1.36, 0.38, 1.25)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_tire")
+material_override = SubResource("Material_dark")
+
+[node name="TireRearRight" type="MeshInstance3D" parent="."]
+position = Vector3(1.36, 0.38, 1.25)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_tire")
+material_override = SubResource("Material_dark")
+
+[node name="LoadZone" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 1
+monitorable = false
+
+[node name="CollisionShape" type="CollisionShape3D" parent="LoadZone"]
+position = Vector3(0, 0.9, 3.25)
+shape = SubResource("Shape_load_zone")
+
+[node name="CargoPose" type="Marker3D" parent="."]
+position = Vector3(0, 0.05, -0.35)

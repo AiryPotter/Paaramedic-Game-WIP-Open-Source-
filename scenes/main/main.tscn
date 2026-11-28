@@ -1,0 +1,135 @@
+[gd_scene format=3 uid="uid://bl1m6lkwlffoi"]
+
+[ext_resource type="Script" uid="uid://bdagxbsb8gt" path="res://scripts/player/player_controller.gd" id="1_player"]
+[ext_resource type="Script" uid="uid://b3jawsy5my7sg" path="res://ui/mobile_controls.gd" id="2_mobile_controls"]
+[ext_resource type="PackedScene" path="res://scenes/equipment/primary_bag.tscn" id="3_primary_bag"]
+[ext_resource type="Script" uid="uid://r5onmwek5yda" path="res://scripts/interaction/pickup_interactor.gd" id="4_pickup_interactor"]
+[ext_resource type="PackedScene" path="res://scenes/equipment/secondary_bag.tscn" id="5_secondary_bag"]
+[ext_resource type="PackedScene" path="res://scenes/stretcher/stretcher.tscn" id="6_stretcher"]
+[ext_resource type="PackedScene" path="res://scenes/equipment/defibrillator.tscn" id="7_defibrillator"]
+[ext_resource type="PackedScene" path="res://scenes/patient/training_patient.tscn" id="8_training_patient"]
+[ext_resource type="PackedScene" path="res://scenes/props/training_car.tscn" id="9_training_car"]
+[ext_resource type="PackedScene" path="res://scenes/props/pickup_truck.tscn" id="10_pickup_truck"]
+[ext_resource type="PackedScene" path="res://scenes/props/bystander.tscn" id="11_bystander"]
+[ext_resource type="PackedScene" path="res://scenes/ambulance/ambulance.tscn" id="12_ambulance"]
+
+[sub_resource type="Environment" id="Environment_training"]
+background_mode = 1
+background_color = Color(0.12, 0.18, 0.22, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.72, 0.78, 0.84, 1)
+ambient_light_energy = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.48, 0.46, 0.4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(24, 0.2, 24)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(24, 0.2, 24)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.35
+height = 1.8
+
+[node name="Main" type="Node3D" unique_id=751350397]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1145898735]
+environment = SubResource("Environment_training")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=547214209]
+transform = Transform3D(0.8253356, 0.4050497, -0.3933902, 0, 0.6967067, 0.7173561, 0.5646425, -0.59205955, 0.57501686, 0, 0, 0)
+shadow_enabled = true
+
+[node name="TrainingFloor" type="StaticBody3D" parent="." unique_id=30691957]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+
+[node name="FloorMesh" type="MeshInstance3D" parent="TrainingFloor" unique_id=779636441]
+material_override = SubResource("Material_floor")
+mesh = SubResource("BoxMesh_floor")
+
+[node name="FloorCollision" type="CollisionShape3D" parent="TrainingFloor" unique_id=330492314]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="PickupTruck" parent="." instance=ExtResource("10_pickup_truck")]
+position = Vector3(-3, 0, -2)
+
+[node name="TrainingCar" parent="." instance=ExtResource("9_training_car")]
+position = Vector3(3, 0, -4)
+
+[node name="Ambulance" parent="." instance=ExtResource("12_ambulance")]
+position = Vector3(0, 0, -7)
+
+[node name="BystanderNorthWest" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(-8, 0, -6)
+rotation = Vector3(0, -2.2, 0)
+shirt_color = Color(0.18, 0.42, 0.58, 1)
+
+[node name="BystanderNorthEast" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(8, 0, -6)
+rotation = Vector3(0, 2.2, 0)
+shirt_color = Color(0.68, 0.32, 0.16, 1)
+
+[node name="BystanderSouthWest" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(-8, 0, 6)
+rotation = Vector3(0, -1.0, 0)
+shirt_color = Color(0.24, 0.48, 0.28, 1)
+
+[node name="BystanderSouthEast" parent="." instance=ExtResource("11_bystander")]
+position = Vector3(8, 0, 6)
+rotation = Vector3(0, 1.0, 0)
+shirt_color = Color(0.56, 0.42, 0.2, 1)
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1115007235]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+script = ExtResource("1_player")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Player" unique_id=380245770]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_player")
+
+[node name="BodyCollision" type="CollisionShape3D" parent="Player" unique_id=1783173113]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Camera3D" type="Camera3D" parent="Player" unique_id=1297847111]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
+current = true
+fov = 85.0
+
+[node name="HoldPoint" type="Marker3D" parent="Player/Camera3D" unique_id=381189203]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, -1.35)
+
+[node name="Interactor" type="Node" parent="Player" unique_id=636061588]
+script = ExtResource("4_pickup_interactor")
+
+[node name="PrimaryBag" parent="." unique_id=2092615659 instance=ExtResource("3_primary_bag")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.23, 2.7)
+pad_resting_height = 0.3
+
+[node name="SecondaryBag" parent="." unique_id=1276071056 instance=ExtResource("5_secondary_bag")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.19, 2.7)
+pad_resting_height = 0.3
+
+[node name="KOLEDefibrillator" parent="." unique_id=751403149 instance=ExtResource("7_defibrillator")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16, 2.7)
+
+[node name="Stretcher" parent="." unique_id=314406897 instance=ExtResource("6_stretcher")]
+
+[node name="TrainingPatient" parent="." unique_id=1308453449 instance=ExtResource("8_training_patient")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.65, 0, -1.5)
+
+[node name="MobileControlsLayer" type="CanvasLayer" parent="." unique_id=1864688205]
+
+[node name="MobileControls" type="Control" parent="MobileControlsLayer" unique_id=1953264818]
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("2_mobile_controls")
+player_path = NodePath("../../Player")
+interactor_path = NodePath("../../Player/Interactor")
