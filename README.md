@@ -87,6 +87,7 @@ scripts/
 ui/mobile_controls.gd      Touch joystick, LOOK pad and buttons
 tests/                     QA runner (on iPad) and headless launcher (on a computer)
 assets/                    Models, materials, textures (empty so far)
+art/concept/               Concept art: characters and ambulance (not in the game yet)
 documentation/
   GAME_DESIGN.md           Vision, design pillars and roadmap
   DEVELOPMENT_LOG.md       What each milestone added and what still needs testing
