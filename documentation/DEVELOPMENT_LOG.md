@@ -84,3 +84,15 @@
 - Locked-caster constraints operate on `PhysicsDirectBodyState3D`; character bumps are queued and applied there before those constraints. Steering yaw uses actual forward speed; bump and push behavior still needs device verification.
 - Added `documentation/GAME_DESIGN.md` with the iPad demo target, core loop, and staged roadmap. No clinical findings or treatment steps are presented in this milestone.
 - Runtime validation is pending: assess the patient, lower/raise the deck, confirm secured equipment follows both transitions, align and load the patient only at the low position, raise with the patient aboard, verify touch-safe UI and camera transition/orbit/re-grab behavior, grab from oblique angles at each end/side and confirm facing aligns, test PUSH in each caster-lock setup, bump the stretcher in all four lock states and confirm a sideways hit swings the free end with one axle pair locked, test swing-and-slide from both ends when both caster pairs are free, and retest touch recovery.
+
+## Milestone 9 follow-up — Approved fixes, readability, architecture guide (Claude Code, 2026-11-27)
+
+- Restored the stretcher deck's collision: `CollisionDeck` had been moved under the plain `DeckAssembly` node, where Godot ignores collision shapes. It is a direct child of the stretcher again and moves with LOWER/RAISE.
+- Pad sensor is touch-only (maintainer decision): 1.0 x 0.06 x 2.2 m on the pad top. Items stick only when they touch the pad; overhanging items still stick; no stacking.
+- Controlled patient TRANSFER (maintainer decision): the patient can no longer be picked up or tossed. After ASSESS, TRANSFER works when the stretcher is lowered, stopped and lined up; the button shows what is missing. The loaded patient adds 18 kg to the stretcher.
+- Stretcher reach is back to the maintainer's 5.5 m.
+- QA runner: fixed a parse error that stopped it loading in Godot 4.7.2; replaced the toss tests with TRANSFER tests; added collision-shape checks; fixed three tests that measured one frame too early. Added `tests/run_qa_headless.gd` to run the suite on a computer.
+- Readability cleanup with no behavior change: summaries at the top of every script, sections, named constants, typed references instead of string calls, smaller stretcher driving functions, one pending request in the interactor, and one button builder in the UI.
+- Added `documentation/ARCHITECTURE.md`, a guide to how the code fits together.
+- Verified on a computer in Godot 4.7.2 (headless, 60 fps, iPad-sized view): 44/44 QA checks pass, with identical measured values before and after the cleanup. Main scene runs without errors.
+- Runtime validation is pending on iPad: walk into the deck and aim at it to grab; drop items on, beside and above the pad; ASSESS then TRANSFER from each side and with the stretcher misaligned; raise with the patient aboard; check pushing feels heavier with the patient on.
