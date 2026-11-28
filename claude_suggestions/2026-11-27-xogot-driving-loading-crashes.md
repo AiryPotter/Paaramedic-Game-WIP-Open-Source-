@@ -19,7 +19,7 @@
 | Purpose of driving and crashes | **Both:** ambulance driving (with crashes as a result of unsafe driving), and vehicle crash scenes that the paramedic responds to |
 | Driving controls | **Joystick, like the first-person view.** Wheel-and-pedals and tilt steering are researched below as alternatives. |
 | Unsafe transport | **Loses points and is explained in the debrief.** This covers driving off with the stretcher unsecured, and harsh driving with a patient on board. |
-| Crash scenes | **The paramedic is alone on scene.** No fire crew or other responders. |
+| Crew | **The paramedic works alone on every call,** including crash scenes. No partner. Backup (ACP, CCP, police, doctor by radio or phone) can still be called and acts on its own. No fire crew for now. |
 | Trapped patients | **None yet.** Early crash scenes have patients who can be reached without extrication. Entrapment comes later. Extrication roles are researched below. |
 
 **Fit with the milestone plan:** Milestone 16 keeps driving out of the first demo. Everything on driving here is for after the demo. Loading (section 3) applies now. Crash scenes (section 4) could become a later scenario.
@@ -165,11 +165,11 @@ Notes on the methods:
 - **Crash detection:** reuse the KOLE pattern. Turn on contact monitoring and compare velocity before and after a contact. A large change is a crash, and its size gives the severity. Emit a signal such as `crashed(severity, contact_point)` so damage, sound, the patient's state and the event log can each react.
 
 ### Crash scenes to respond to
-**Maintainer decisions: the paramedic is alone on scene, and there are no trapped patients yet.**
+**Maintainer decisions: the paramedic arrives alone, with no partner, and there are no trapped patients yet.** Backup can still be called.
 
 - Build the scene with method B: one or two wrecked cars and the hazards that the protocols list.
 - Every patient can be reached without cutting: through an open or unlocked door, or already out of the car.
-- Because the paramedic is alone, there is no partner for lifting. How a lone paramedic moves a patient follows the maintainer's protocols. This affects the stretcher and stair chair work in Milestones 11 and 12, which assumed a partner.
+- There is no partner for lifting. Moving the patient uses one-person actions, as updated in the milestone plan (controlled transfer, tracked stair chair). How a lone paramedic moves a patient follows the maintainer's protocols.
 - Hazards and patient care steps at a crash, such as scene safety, traffic and spinal care, must come from the maintainer's protocols with clinical review. None is described here.
 
 ### Extrication roles (research for later, when trapped patients are added)
@@ -192,9 +192,8 @@ No game-specific details about extrication were found in Firefighting Simulator:
 
 1. Driving controls: joystick, like the first-person view. Wheel-and-pedals and tilt are researched as later options.
 2. Unsafe transport: loses points and is explained in the debrief.
-3. Crash scenes: the paramedic is alone on scene, with no trapped patients yet. Extrication roles are researched for later.
-
-**New follow-up:** the stretcher and stair chair plans assumed a partner. With the paramedic alone at crash scenes, should the partner also be removed from house calls, or only from crash scenes?
+3. Crash scenes: no trapped patients yet. Extrication roles are researched for later.
+4. Crew: the paramedic works alone on every call, with no partner. Backup can still be called. Stairs use a tracked stair chair (recorded in the milestone plan).
 
 ## Sources
 

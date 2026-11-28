@@ -41,11 +41,11 @@ Add a simple main menu, pause/restart flow, and settings. Introduce a small `Gam
 
 ### Milestone 11 — Stretcher obstacle course
 
-Build one two-level house blockout with an upstairs room, stairs, living room, hallway, exit, and driveway. Use a stair chair to move the patient down stairs with a partner, then transfer to the stretcher at the bottom. Keep doors and corridors generous enough for the 1.0 m stretcher; create challenge with corners, clutter, rugs, thresholds, and furniture rather than unfairly narrow openings. Track hard stretcher impacts and time to exit.
+Build one two-level house blockout with an upstairs room, stairs, living room, hallway, exit, and driveway. The paramedic works alone (maintainer decision), so stairs use a tracked stair chair that one person guides down; then transfer to the stretcher at the bottom. Keep doors and corridors generous enough for the 1.0 m stretcher; create challenge with corners, clutter, rugs, thresholds, and furniture rather than unfairly narrow openings. Track hard stretcher impacts and time to exit.
 
 ### Milestone 12 — People and transfer
 
-Add a patient character, a small partner role, and any needed bystanders. Build controlled floor-to-stair-chair and floor-to-stretcher transfers, plus a secured patient state that follows the carrying device. Test patient mass and balance separately before combining them with the main scene. Add navigation only for NPC behavior needed in the demo.
+Add a patient character and any needed bystanders. There is no partner medic: the paramedic works alone on every call, and backup arrives only when called (maintainer decision). Build controlled floor-to-stair-chair and floor-to-stretcher transfers, plus a secured patient state that follows the carrying device. Test patient mass and balance separately before combining them with the main scene. Add navigation only for NPC behavior needed in the demo.
 
 ### Milestone 13 — Dialogue and history
 

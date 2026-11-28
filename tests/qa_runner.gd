@@ -317,8 +317,8 @@ func _test_patient_ray_target() -> void:
 
 
 func _test_touch_id_reuse() -> void:
-	var viewport_size := _mobile_controls.size
-	var joystick_center := Vector2(92.0, viewport_size.y - 92.0)
+	# The joystick can be moved in settings, so ask the UI where it is.
+	var joystick_center: Vector2 = _mobile_controls.call("_joystick_center")
 	var first_touch := InputEventScreenTouch.new()
 	first_touch.index = TOUCH_ID_FOR_TEST
 	first_touch.pressed = true
@@ -500,7 +500,7 @@ func _test_stretcher_patient_and_pad() -> void:
 	)
 	_bag.global_position = _stretcher.to_global(Vector3(0.8, bag_center_y, -0.5))
 	await _wait_physics_frames(8)
-	var bag_stuck := bool(_bag.get("is_stuck")) and _bag.get("stuck_to") == _stretcher
+	var bag_stuck: bool = bool(_bag.get("is_stuck")) and _bag.get("stuck_to") == _stretcher
 	var bag_local_position := _stretcher.to_local(_bag.global_position)
 	_record(
 		"Pad sensor secures an overhanging bag",
@@ -627,7 +627,7 @@ func _test_stretcher_patient_and_pad() -> void:
 	_camera.look_at(_patient.global_position + Vector3(0.0, 0.3, 0.0), Vector3.UP)
 	await get_tree().physics_frame
 	_interactor.call("_refresh_aim_target")
-	var aimed_transfer_patient := _interactor.call("_get_aimed_patient") == _patient
+	var aimed_transfer_patient: bool = _interactor.call("_get_aimed_patient") == _patient
 	var transfer_action := str(_interactor.call("get_action_label"))
 	var interaction_button := _mobile_controls.get_node_or_null("InteractionButton") as Button
 	_record(
@@ -692,9 +692,12 @@ func _test_stretcher_patient_and_pad() -> void:
 	else:
 		_interactor.call("request_height_toggle")
 	await get_tree().physics_frame
-	var raised := await _wait_for_method_bool(
-		_stretcher, "is_lowered_for_loading", false, MAX_TRANSITION_FRAMES
+	# is_lowered_for_loading() is already false while RAISE is still animating, so wait
+	# for is_lowered itself, then let the last physics step move the patient.
+	var raised := await _wait_for_property_bool(
+		_stretcher, "is_lowered", false, MAX_TRANSITION_FRAMES
 	)
+	await _wait_physics_frames(2)
 	var patient_y_after_raise := _patient.global_position.y
 	_record(
 		"RAISE carries transferred patient",
@@ -828,6 +831,9 @@ func _test_push_button() -> void:
 	var grabbed := bool(_stretcher.call("grab", _player))
 	if grabbed:
 		_interactor.set("grabbed_stretcher", _stretcher)
+	# process_frame fires before the UI's _process(), so wait one more frame for the
+	# button to refresh.
+	await get_tree().process_frame
 	await get_tree().process_frame
 	var push_button := _mobile_controls.get_node_or_null("PushButton") as Button
 	var button_ready := (

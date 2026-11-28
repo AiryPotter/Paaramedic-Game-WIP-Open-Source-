@@ -34,6 +34,8 @@ The call: dispatch, arrive, make the scene safe, assess and treat, call backup i
 | Stretcher width | **Keep 1.0 m.** Build doors and halls larger than real life to fit. |
 | After loading | **Hospital handover:** fade to the hospital, wheel the patient in, give a verbal report |
 | Stairs | **Stair chair:** move the patient down stairs in a stair chair, then transfer to the stretcher |
+| Crew (decided 2026-11-27) | **The paramedic works alone on every call.** No partner medic. Backup (ACP, CCP, police, and the doctor by radio or phone) can still be called and acts on its own. |
+| Stair chair type (2026-11-27) | **Tracked stair chair** that one person can guide down stairs |
 | Unneeded backup | **Debrief note only.** No points lost. |
 | How students play | **On the maintainer's iPad in Xogot.** No Mac or TestFlight for the first demo. |
 | Handover format | **MIST** (Mechanism or Medical complaint, Injuries or Illness, Signs, Treatment) |
@@ -56,7 +58,7 @@ The call: dispatch, arrive, make the scene safe, assess and treat, call backup i
 | Ambulance model | [Kenney Car Kit](https://kenney.nl/assets/car-kit) (CC0, includes an ambulance) | No |
 | Furniture, props, UI art | [Kenney assets](https://kenney.nl/assets) (CC0) | No |
 | People and animations | [Quaternius Universal Animation Library](https://quaternius.com/packs/universalanimationlibrary.html) (CC0, has push, sit, crawl, death and more on one humanoid rig) | No |
-| Stair chair | Custom: a carried item with a sitting patient, using the Quaternius sit animation | **Yes** |
+| Stair chair | Custom: a tracked stair chair guided by one person, with a sitting patient (Quaternius sit animation) | **Yes** |
 | Patient ragdoll (optional) | `3d/ragdoll_physics` in Godot demos | Small glue only |
 | Patient vitals and condition | Custom. Reference: [Infirmary Integrated](https://github.com/tanjera/infirmary-integrated) (Apache-2.0, C#, read only) | **Yes** |
 | Monitor screen (ECG line, numbers) | Custom `Line2D` drawing. Use Infirmary Integrated as a reference for rhythm shapes. | **Yes** |
@@ -101,7 +103,9 @@ Make what exists reliable before adding features.
 
 - Doorways at least 1.2 m wide, halls at least 1.5 m, and corners with room to turn a 2.2 m stretcher.
 - Make the obstacles come from tight corners, furniture, clutter, rugs or thresholds, and steps, not narrow doors.
-- **Stairs (maintainer decision): stair chair.** The stretcher cannot go on stairs. The student leaves it at the bottom, brings a stair chair to the patient, moves the patient onto it, and carries it down with the partner (a short animation, with the player choosing when to start each flight). At the bottom, the patient is moved onto the stretcher.
+- **Stairs (maintainer decision): stair chair.** The stretcher cannot go on stairs. The student leaves it at the bottom, brings a stair chair to the patient, moves the patient onto it, and guides it down alone (maintainer decision: **tracked stair chair**, one person). At the bottom, the patient is moved onto the stretcher.
+  - Guiding: at the top of a flight, tap TILT to tip the chair back onto its tracks, then hold the joystick back to roll down one step at a time. Going too fast, or starting before the patient is secured, is logged for the debrief.
+  - The tracks only work going down. The chair is pushed on its wheels on flat floor.
   - The stair chair is a new carried item with a seated patient. Moving the patient onto it, and later onto the stretcher, uses the same transfer action as Milestone 12.
   - Score: chair used on stairs (never the stretcher), and patient secured before moving.
 
@@ -116,10 +120,12 @@ Build:
 
 ### Milestone 12: People
 
-- Patient, bystander and partner characters on the Quaternius rig. Animations needed: idle, walk, sit, lie down, lying on the stretcher, aggressive pose, being restrained.
+- Patient and bystander characters on the Quaternius rig. **No partner medic** (maintainer decision, 2026-11-27). Animations needed: idle, walk, sit, lie down, lying on the stretcher, aggressive pose, being restrained.
 - The patient on the stretcher moves with it, like stuck items (no physics), and counts as stretcher weight.
 - NPCs walk with `NavigationAgent3D` and are driven by State Charts.
-- Partner medic: follows the player and helps lift. Keep the partner's role small in the demo.
+- The paramedic works alone. Every lift and transfer is a one-person action: the controlled TRANSFER from review 4, and the tracked stair chair. How a lone paramedic moves a patient follows the maintainer's protocols.
+- Backup crews from Milestone 15 still arrive and act on their own when called.
+- `documentation/GAME_DESIGN.md` still mentions a partner in the target demo and in Milestones 11 and 12. Update it to match.
 
 **Done when:** a patient can be moved from the floor or couch onto the stretcher, and NPCs walk around obstacles.
 
@@ -207,7 +213,7 @@ Milestones 11 and 14 can run side by side once 10 is done. Do not start 15 befor
 
 ## Questions for the maintainer (all answered)
 
-1. Stairs: stair chair (Milestone 11).
+1. Stairs: tracked stair chair, guided by the paramedic alone (Milestone 11).
 2. Unneeded backup: debrief note only, no points lost (Milestone 15).
 3. Demo: played on the maintainer's iPad in Xogot (Milestone 18).
 4. Handover in MIST format. Content follows the maintainer's service protocols, reviewed by a qualified paramedic or instructor. **Still needed: the maintainer sends the protocol documents before Milestone 14.**

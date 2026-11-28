@@ -101,3 +101,14 @@
 - Expanded the training sandbox into a neutral transport mission: assess the mannequin, secure it on the lowered stretcher, raise and wheel the stretcher to the ambulance, then align and load it.
 - Added an alignment-checked rear LOAD action with clear guidance for missing patient, lowered deck, movement, and alignment requirements. The stretcher releases its operator, freezes safely, and animates into the cargo bay; completion is logged only after the animation.
 - Runtime validation is pending: inspect the ambulance model in-game, confirm the loading zone and alignment feel generous on touch, verify the loading animation and patient follow-through, and check objective completion.
+
+## Combined edition — merged-edition + approved fixes and readability cleanup (Claude Code, 2026-11-27)
+
+- Combined the `merged-edition` branch (menus, GameState, ambulance, vehicles, bystanders, controlled transfer) with `xogot-project-upload` (approved fixes, readability cleanup, `ARCHITECTURE.md`). Where both changed the same behavior, `merged-edition` wins: it is newer and includes developer feedback.
+- Re-applied the readability cleanup to the scripts both branches changed (stretcher, interactor, mannequin, touch UI): summaries, sections, named constants, typed references. No behavior change.
+- Placed the ambulance in the training scene at (0, 0, -7), rear ramp facing the play area. Its scene existed but was not in `main.tscn`, so the last objective could not be completed. A physics check confirms the stretcher can be wheeled straight to the loading spot between the parked vehicles.
+- Fixed `scripts/ui/main_menu.gd`, which did not load in Godot 4.7.2 (`PackedStringArray` has no `join()`; it is `"\n• ".join(list)`). The main menu is now the startup scene, so objectives show from the start.
+- QA runner: fixed two parse errors that stopped it loading in Godot 4.7.2, and four tests that measured too early or assumed the old fixed joystick position.
+- Updated `documentation/ARCHITECTURE.md` for the game flow, GameState, objectives and ambulance.
+- Verified on a computer in Godot 4.7.2 (headless, 60 fps, iPad-sized view): 58/58 QA checks pass; every check that passed before the combine reports the same measured values. Menu → START → training scene runs without errors, and all 34 scripts, scenes and resources load.
+- Runtime validation is pending on iPad: the main menu, settings and control editor, PAUSE and its buttons, then the full mission (assess, transfer, raise, wheel to the ambulance, LOAD) and the objective text at each step.

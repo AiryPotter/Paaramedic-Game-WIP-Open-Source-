@@ -49,7 +49,7 @@ func _build_ui() -> void:
 	_add_label(_menu_box, TRAINING_SCENARIO.title, 22)
 	_add_label(_menu_box, TRAINING_SCENARIO.location, 16)
 	_add_label(_menu_box, TRAINING_SCENARIO.briefing, 17)
-	var objective_text := "OBJECTIVES\n• " + TRAINING_SCENARIO.objectives.join("\n• ")
+	var objective_text: String = "OBJECTIVES\n• " + "\n• ".join(TRAINING_SCENARIO.objectives)
 	_add_label(_menu_box, objective_text, 15)
 	_add_button(_menu_box, "START TRAINING", _start_training)
 	_add_button(_menu_box, "SETTINGS", func(): _show_settings(true))
