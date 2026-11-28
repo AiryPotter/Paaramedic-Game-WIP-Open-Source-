@@ -1,89 +1,82 @@
 extends Node
 class_name PickupInteractor
 
-## Queues touch-triggered pickup/release requests for the physics tick.
+## What the player is aiming at, and what the action buttons do with it.
+##
+##   - The touch UI calls request_*() when a button is tapped. The request is carried out
+##     on the next physics tick, so it never races the physics engine.
+##   - Only one request is kept at a time; a newer tap replaces an older one.
+##   - get_*_label() and can_*() tell the UI what each button should say and whether it
+##     is enabled.
+## Child of the Player node. See documentation/ARCHITECTURE.md.
 
-@export var bag_interaction_distance: float = 2.8
-@export var stretcher_interaction_distance: float = 5.5
+enum Request { NONE, INTERACT, TOSS, PUSH, CHANGE_HEIGHT }
+
+@export var bag_interaction_distance: float = 2.8       ## m reach for bags, KOLE and the patient
+@export var stretcher_interaction_distance: float = 5.5 ## m reach for the stretcher (maintainer decision)
 @export_range(0.5, 4.0, 0.1) var maximum_toss_speed: float = 2.8
 
-var player: CharacterBody3D
+const PATIENT_AIM_LAYER: int = 2           ## the patient's InteractionArea is on layer 2
+const TOSS_UPWARD_SHARE: float = 0.35      ## gives tosses a slight arc
+const DROP_INHERITED_VELOCITY: float = 0.25 ## share of walking speed a dropped item keeps
+
+var player: PlayerController
 var player_camera: Camera3D
 var hold_point: Node3D
-var held_object: HoldableObject
-var grabbed_stretcher: RigidBody3D
-var _interaction_requested: bool = false
-var _toss_requested: bool = false
-var _push_requested: bool = false
-var _aimed_collider: Object
+var held_object: HoldableObject             ## item in hand, or null
+var grabbed_stretcher: StretcherController   ## stretcher being operated, or null
+
+var _pending_request: Request = Request.NONE
+var _aimed_collider: Object                 ## what the center of the screen points at
 var _aimed_distance: float = INF
-var _training_patient: Node
-var _stretcher: RigidBody3D
-var _height_toggle_requested: bool = false
+var _training_patient: TrainingPatient
+var _stretcher: StretcherController         ## the scene's stretcher, for patient hints
 
 
 func _ready() -> void:
-	player = get_parent() as CharacterBody3D
+	player = get_parent() as PlayerController
 	player_camera = player.get_node("Camera3D") as Camera3D
 	hold_point = player_camera.get_node("HoldPoint") as Node3D
-	_training_patient = get_tree().get_first_node_in_group("training_patient")
-	_stretcher = get_tree().get_first_node_in_group("grabbable_stretcher") as RigidBody3D
+	_training_patient = get_tree().get_first_node_in_group("training_patient") as TrainingPatient
+	_stretcher = get_tree().get_first_node_in_group("grabbable_stretcher") as StretcherController
 
+
+# ======================================================================================
+# Requests from the touch UI
+# ======================================================================================
 
 func request_interaction() -> void:
-	_interaction_requested = true
-	_toss_requested = false
-	_push_requested = false
-	_height_toggle_requested = false
+	_pending_request = Request.INTERACT
 
 
 func request_toss() -> void:
 	if is_instance_valid(held_object):
-		_toss_requested = true
-		_interaction_requested = false
-		_push_requested = false
-		_height_toggle_requested = false
+		_pending_request = Request.TOSS
 
 
 func request_push() -> void:
 	if is_instance_valid(grabbed_stretcher):
-		_push_requested = true
-		_interaction_requested = false
-		_toss_requested = false
-		_height_toggle_requested = false
-
-
-func can_change_stretcher_height() -> bool:
-	return (
-		is_instance_valid(grabbed_stretcher)
-		and bool(grabbed_stretcher.call("can_change_height"))
-	)
-
-
-func get_stretcher_height_label() -> String:
-	if is_instance_valid(grabbed_stretcher):
-		return str(grabbed_stretcher.call("get_height_action_label"))
-	return "LOWER"
+		_pending_request = Request.PUSH
 
 
 func request_height_toggle() -> void:
-	if is_instance_valid(grabbed_stretcher) and can_change_stretcher_height():
-		_height_toggle_requested = true
-		_interaction_requested = false
-		_toss_requested = false
-		_push_requested = false
+	if can_change_stretcher_height():
+		_pending_request = Request.CHANGE_HEIGHT
 
 
-func can_push_stretcher() -> bool:
-	return (
-		is_instance_valid(grabbed_stretcher)
-		and bool(grabbed_stretcher.call("can_push_from_operator", player))
-	)
+func toggle_front_caster_lock() -> void:
+	if is_instance_valid(grabbed_stretcher):
+		grabbed_stretcher.toggle_front_caster_lock()
 
 
-func get_push_label() -> String:
-	return "PUSH" if can_push_stretcher() else "FACE ALONG TO PUSH"
+func toggle_rear_caster_lock() -> void:
+	if is_instance_valid(grabbed_stretcher):
+		grabbed_stretcher.toggle_rear_caster_lock()
 
+
+# ======================================================================================
+# Button labels and states for the touch UI
+# ======================================================================================
 
 func has_held_object() -> bool:
 	return is_instance_valid(held_object)
@@ -93,33 +86,13 @@ func is_stretcher_grabbed() -> bool:
 	return is_instance_valid(grabbed_stretcher)
 
 
+## Always false: the right-hand pad orbits the camera while operating the stretcher.
+## (Kept because ui/mobile_controls.gd still checks it.)
 func look_control_moves() -> bool:
-	# Keep the right-side pad available for camera orbit while operating the stretcher.
 	return false
 
 
-func get_front_lock_label() -> String:
-	if is_instance_valid(grabbed_stretcher):
-		return str(grabbed_stretcher.call("get_front_lock_label"))
-	return "FRONT: FREE"
-
-
-func get_rear_lock_label() -> String:
-	if is_instance_valid(grabbed_stretcher):
-		return str(grabbed_stretcher.call("get_rear_lock_label"))
-	return "REAR: FREE"
-
-
-func toggle_front_caster_lock() -> void:
-	if is_instance_valid(grabbed_stretcher):
-		grabbed_stretcher.call("toggle_front_caster_lock")
-
-
-func toggle_rear_caster_lock() -> void:
-	if is_instance_valid(grabbed_stretcher):
-		grabbed_stretcher.call("toggle_rear_caster_lock")
-
-
+## Text for the main INTERACT button, based on what is held or aimed at.
 func get_action_label() -> String:
 	if is_instance_valid(held_object):
 		return "DROP ITEM"
@@ -129,56 +102,90 @@ func get_action_label() -> String:
 	if is_instance_valid(patient):
 		if _aimed_distance > bag_interaction_distance:
 			return "APPROACH PATIENT"
-		if bool(patient.get("is_loaded")):
+		if patient.is_loaded:
 			return "PATIENT LOADED"
-		if not bool(patient.get("assessment_started")):
+		if not patient.assessment_started:
 			return "ASSESS PATIENT"
-		var hint := str(patient.call("get_transfer_hint", _stretcher))
+		var hint := patient.get_transfer_hint(_stretcher)
 		return "TRANSFER" if hint.is_empty() else hint
 	return "INTERACT"
 
 
+## Text for the status panel at the top of the screen.
 func get_status_text() -> String:
-	if not is_instance_valid(_training_patient) or not _training_patient.has_method("get_hud_text"):
+	if not is_instance_valid(_training_patient):
 		return "TRAINING CASE 01\nFind the patient and assess them."
-	return str(_training_patient.call("get_hud_text", _stretcher))
+	return _training_patient.get_hud_text(_stretcher)
 
+
+func can_change_stretcher_height() -> bool:
+	return is_instance_valid(grabbed_stretcher) and grabbed_stretcher.can_change_height()
+
+
+func get_stretcher_height_label() -> String:
+	if is_instance_valid(grabbed_stretcher):
+		return grabbed_stretcher.get_height_action_label()
+	return "LOWER"
+
+
+func can_push_stretcher() -> bool:
+	return is_instance_valid(grabbed_stretcher) and grabbed_stretcher.can_push_from_operator(player)
+
+
+func get_push_label() -> String:
+	return "PUSH" if can_push_stretcher() else "FACE ALONG TO PUSH"
+
+
+func get_front_lock_label() -> String:
+	if is_instance_valid(grabbed_stretcher):
+		return grabbed_stretcher.get_front_lock_label()
+	return "FRONT: FREE"
+
+
+func get_rear_lock_label() -> String:
+	if is_instance_valid(grabbed_stretcher):
+		return grabbed_stretcher.get_rear_lock_label()
+	return "REAR: FREE"
+
+
+# ======================================================================================
+# Physics tick: carry out the pending request
+# ======================================================================================
 
 func _physics_process(_delta: float) -> void:
 	_refresh_aim_target()
 	if is_instance_valid(held_object):
 		held_object.follow_hold_point(hold_point.global_transform)
 
-	if _height_toggle_requested:
-		_height_toggle_requested = false
-		if is_instance_valid(grabbed_stretcher):
-			grabbed_stretcher.call("toggle_height")
-		return
+	var request := _pending_request
+	_pending_request = Request.NONE
+	match request:
+		Request.CHANGE_HEIGHT:
+			if is_instance_valid(grabbed_stretcher):
+				grabbed_stretcher.toggle_height()
+		Request.PUSH:
+			_push_stretcher()
+		Request.TOSS:
+			if is_instance_valid(held_object):
+				_toss_held_object()
+		Request.INTERACT:
+			_interact()
 
-	if _push_requested:
-		_push_requested = false
-		_push_stretcher()
-		return
 
-	if _toss_requested:
-		_toss_requested = false
-		if is_instance_valid(held_object):
-			_toss_held_object()
-		return
-
-	if not _interaction_requested:
-		return
-	_interaction_requested = false
-
+## INTERACT does one thing, in this order: drop what is held, let go of the stretcher, or
+## act on what is aimed at.
+func _interact() -> void:
 	if is_instance_valid(held_object):
 		_release_held_object()
 	elif is_instance_valid(grabbed_stretcher):
-		grabbed_stretcher.call("release", player)
+		grabbed_stretcher.release(player)
 		grabbed_stretcher = null
 	else:
 		_try_pick_up_object()
 
 
+## Casts a ray from the camera's center up to the stretcher reach, hitting bodies and the
+## patient's interaction area.
 func _refresh_aim_target() -> void:
 	_aimed_collider = null
 	_aimed_distance = INF
@@ -187,7 +194,7 @@ func _refresh_aim_target() -> void:
 	var query := PhysicsRayQueryParameters3D.create(
 		origin,
 		origin + forward * stretcher_interaction_distance,
-		player.collision_mask | 2,
+		player.collision_mask | PATIENT_AIM_LAYER,
 		[player.get_rid()]
 	)
 	query.collide_with_areas = true
@@ -198,13 +205,14 @@ func _refresh_aim_target() -> void:
 	_aimed_distance = origin.distance_to(hit.get("position"))
 
 
-func _get_aimed_patient() -> Node:
+## The patient if the ray hit the patient or any of its child areas.
+func _get_aimed_patient() -> TrainingPatient:
 	if not _aimed_collider is Node:
 		return null
 	var target := _aimed_collider as Node
 	while target != null:
-		if target.is_in_group("training_patient"):
-			return target
+		if target is TrainingPatient:
+			return target as TrainingPatient
 		target = target.get_parent()
 	return null
 
@@ -215,23 +223,24 @@ func _try_pick_up_object() -> void:
 
 	var patient := _get_aimed_patient()
 	if is_instance_valid(patient):
-		if _aimed_distance > bag_interaction_distance or bool(patient.get("is_loaded")):
+		# Patients are never picked up: first ASSESS, then TRANSFER when lined up.
+		if _aimed_distance > bag_interaction_distance or patient.is_loaded:
 			return
-		if not bool(patient.get("assessment_started")):
-			patient.call("assess_patient")
+		if not patient.assessment_started:
+			patient.assess_patient()
 			return
-		if str(patient.call("get_transfer_hint", _stretcher)).is_empty():
-			patient.call("load_onto_stretcher", _stretcher)
+		if patient.get_transfer_hint(_stretcher).is_empty():
+			patient.load_onto_stretcher(_stretcher)
 		return
 
-	var collider: Object = _aimed_collider
-	if collider is HoldableObject:
+	if _aimed_collider is HoldableObject:
 		if _aimed_distance <= bag_interaction_distance:
-			held_object = collider as HoldableObject
+			held_object = _aimed_collider as HoldableObject
 			held_object.pick_up(hold_point.global_transform)
-	elif collider is RigidBody3D and collider.is_in_group("grabbable_stretcher"):
-		if _aimed_distance <= stretcher_interaction_distance and bool(collider.call("grab", player)):
-			grabbed_stretcher = collider as RigidBody3D
+	elif _aimed_collider is StretcherController:
+		var stretcher := _aimed_collider as StretcherController
+		if _aimed_distance <= stretcher_interaction_distance and stretcher.grab(player):
+			grabbed_stretcher = stretcher
 
 
 func _push_stretcher() -> void:
@@ -243,7 +252,7 @@ func _push_stretcher() -> void:
 
 	var stretcher_to_push := grabbed_stretcher
 	grabbed_stretcher = null
-	stretcher_to_push.call("push_from_operator", player)
+	stretcher_to_push.push_from_operator(player)
 
 
 func _release_held_object() -> void:
@@ -251,7 +260,7 @@ func _release_held_object() -> void:
 		held_object = null
 		return
 
-	held_object.release(hold_point.global_transform, player.velocity * 0.25)
+	held_object.release(hold_point.global_transform, player.velocity * DROP_INHERITED_VELOCITY)
 	held_object = null
 
 
@@ -259,6 +268,6 @@ func _toss_held_object() -> void:
 	var forward := -player_camera.global_basis.z
 	forward.y = 0.0
 	forward = forward.normalized()
-	var toss_velocity := (forward + Vector3.UP * 0.35).normalized() * maximum_toss_speed
+	var toss_velocity := (forward + Vector3.UP * TOSS_UPWARD_SHARE).normalized() * maximum_toss_speed
 	held_object.release(hold_point.global_transform, toss_velocity)
 	held_object = null

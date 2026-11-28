@@ -1,10 +1,15 @@
 extends HoldableObject
 class_name TrainingPatient
 
-## Neutral training mannequin. It is never picked up or tossed: after assessment,
-## TRANSFER moves it onto a lowered, stopped, lined-up stretcher.
-## Clinical case data is intentionally omitted until supplied and reviewed.
-## Suggested by Claude Code (fix S3). Written against 9ae595b. Untested.
+## The training patient (a neutral mannequin, placeholder only).
+##
+##   1. INTERACT while aiming at it: ASSESS (records that an assessment happened).
+##   2. Lower the stretcher, stop it, and line it up beside the patient.
+##   3. INTERACT again: TRANSFER slides the patient onto the deck and adds their weight.
+## The patient is never picked up or tossed (maintainer decision). get_transfer_hint()
+## says what is still missing, and the UI shows it on the button.
+## Clinical case data is intentionally omitted until the maintainer's service protocols
+## are supplied and a qualified paramedic or instructor has reviewed them.
 
 const TRANSFER_MAX_SIDE_DISTANCE: float = 1.2
 const TRANSFER_MIN_SIDE_DISTANCE: float = 0.5

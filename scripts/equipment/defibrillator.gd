@@ -1,11 +1,16 @@
 extends HoldableObject
 class_name Defibrillator
 
-## A hard impact cracks the display; the stretcher pad cushions the device.
+## KOLE, the defibrillator (a fictional brand). Its screen cracks, for looks only, on a
+## hard impact such as a hard drop or a toss onto the floor. Landing on the stretcher
+## pad never cracks it, because the pad cushions it.
+##
+## How a hard impact is detected: while touching something, compare this step's velocity
+## with the last one. A big sudden change means a hard hit.
 
-@export var crack_speed_change: float = 3.0
+@export var crack_speed_change: float = 3.0   ## m/s; a 30 cm drop stays under, a chest-height drop goes over
 
-const PAD_TOP_LOCAL_Y: float = 0.82
+const PAD_EDGE_TOLERANCE: float = 0.03        ## contacts this close below the pad top still count as pad
 
 var screen_cracked: bool = false
 var _previous_velocity: Vector3 = Vector3.ZERO
@@ -25,16 +30,13 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	_previous_velocity = state.linear_velocity
 
 
+## True if any contact is on top of the stretcher's pad (not its sides or legs).
 func _is_touching_stretcher_pad(state: PhysicsDirectBodyState3D) -> bool:
 	for contact_index in range(state.get_contact_count()):
-		var collider := state.get_contact_collider_object(contact_index)
-		if collider is Node3D and collider.is_in_group("grabbable_stretcher"):
-			var local_contact := (collider as Node3D).to_local(
-				state.get_contact_collider_position(contact_index)
-			)
-			var pad_top_local_y := PAD_TOP_LOCAL_Y
-			if (collider as Node3D).has_method("get_pad_top_local_y"):
-				pad_top_local_y = float((collider as Node3D).call("get_pad_top_local_y"))
-			if local_contact.y >= pad_top_local_y - 0.03:
-				return true
+		var stretcher := state.get_contact_collider_object(contact_index) as StretcherController
+		if stretcher == null:
+			continue
+		var local_contact := stretcher.to_local(state.get_contact_collider_position(contact_index))
+		if local_contact.y >= stretcher.get_pad_top_local_y() - PAD_EDGE_TOLERANCE:
+			return true
 	return false
